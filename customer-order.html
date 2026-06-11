@@ -371,7 +371,10 @@
   <header class="header">
     <div class="header-left">
       <div class="cafe-name" id="cafeName">Vinay Cafe</div>
-      <div class="table-tag" id="tableTag">🪑 Table —</div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="table-tag" id="tableTag">🪑 Table —</div>
+        <span id="dbStatus" style="font-size: 10px; font-weight: 600; color: var(--text-muted)">● Connecting...</span>
+      </div>
     </div>
     <button class="cart-btn" id="cartBtn" onclick="openCart()">
       🛒 Cart
@@ -483,6 +486,18 @@ async function init() {
   renderApp();
   document.getElementById("loadingScreen").style.display = "none";
   document.getElementById("mainApp").style.display = "block";
+  
+  // Show connection status
+  const dbStatus = document.getElementById("dbStatus");
+  if (dbStatus) {
+    if (customerSupabase && menuItems.length > 0) {
+      dbStatus.innerHTML = "● Online";
+      dbStatus.style.color = "var(--green)";
+    } else {
+      dbStatus.innerHTML = "● Offline (Local Fallback)";
+      dbStatus.style.color = "var(--red)";
+    }
+  }
 }
 
 async function loadPOSState() {
@@ -742,11 +757,18 @@ async function placeOrder() {
     status: "pending",
   };
 
-  // Write to localStorage + Supabase
-  await pushQROrder(order);
+  try {
+    // Write to localStorage + Supabase
+    await pushQROrder(order);
 
-  // Show success
-  showSuccessScreen(order);
+    // Show success
+    showSuccessScreen(order);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Send to Kitchen 🍽";
+  }
 }
 
 async function pushQROrder(order) {
@@ -773,12 +795,16 @@ async function pushQROrder(order) {
       }]);
       if (error) {
         console.error("Supabase insert error:", error);
+        alert("Supabase Database Error: " + JSON.stringify(error));
       } else {
         console.log("QR order pushed to Supabase:", order.id);
       }
     } catch (e) {
       console.error("Failed to push QR order to Supabase:", e);
+      alert("Failed to push to Supabase: " + e.message);
     }
+  } else {
+    alert("Warning: Not connected to Supabase database. The order is stored locally but will not show up on the POS dashboard. Please verify database config/connection.");
   }
 }
 
