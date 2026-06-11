@@ -157,7 +157,7 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
 
 // ── QR Code Generator Modal ───────────────────────────────────────────────
 // Generates a QR code for a given table's ordering URL.
-// Requires: https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js
+// Requires: qrcode.min.js (downloaded locally)
 function QRCodeModal({ tableNum, baseUrl, onClose }) {
   const canvasRef = React.useRef(null);
   const [qrLoaded, setQrLoaded] = React.useState(!!window.QRCode);
