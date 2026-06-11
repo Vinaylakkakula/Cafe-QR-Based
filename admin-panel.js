@@ -156,15 +156,16 @@ const CategoryModal = ({ cat, onClose, onSave }) => {
         </div>
         <div className="modal-body">
           <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              <div className="setting-field">
-                <label>Emoji Icon</label>
+            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+              <div style={{ width: 80 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Icon</label>
                 <input maxLength={4} value={form.icon} onChange={e => upd({ icon: e.target.value })}
-                  style={{ fontSize: 24, textAlign: "center", padding:"10px 8px", letterSpacing:2 }} />
+                  style={{ fontSize: 24, textAlign: "center", width: "100%", height: 42, padding: 0, background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }} />
               </div>
-              <div className="setting-field">
-                <label>Category Name <span style={{ color: "var(--red)" }}>*</span></label>
-                <input autoFocus value={form.name} onChange={e => upd({ name: e.target.value })} placeholder="e.g. Biryani" />
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", display: "block", marginBottom: 6 }}>Category Name <span style={{ color: "var(--red)" }}>*</span></label>
+                <input autoFocus value={form.name} onChange={e => upd({ name: e.target.value })} placeholder="e.g. Biryani"
+                  style={{ width: "100%", height: 42, padding: "0 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)", fontSize: 14, boxSizing: "border-box" }} />
               </div>
             </div>
             {!isEdit && (
