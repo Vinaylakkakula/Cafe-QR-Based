@@ -336,9 +336,9 @@ function App({ authUser, onLogout }) {
       {modal?.type === "receipt" && <ReceiptModal order={modal.order} settings={settings} onClose={() => setModal(null)}/>}
       {modal?.type === "waiter" && <WaiterModal table={modal.table} onClose={() => setModal(null)} onAssign={(name) => assignWaiter(modal.table, name)}/>}
       {modal?.type === "new-res" && <NewReservationModal tables={tables} onClose={() => setModal(null)} onSave={(r) => { setReservations(prev => [...prev, r]); setModal(null); showToast(`Reservation saved for ${r.name}`); }}/>}
-      {modal?.type === "new-customer" && <NewCustomerModal onClose={() => setModal(null)} onSave={(c) => { setCustomers(prev => [...prev, c]); setModal(null); showToast(`${c.name} added`); }}/>
+      {modal?.type === "new-customer" && <NewCustomerModal onClose={() => setModal(null)} onSave={(c) => { setCustomers(prev => [...prev, c]); setModal(null); showToast(`${c.name} added`); }}/>}
       {modal?.type === "qr" && window.QRCodeModal && React.createElement(window.QRCodeModal, { tableNum: modal.tableNum, baseUrl: window.location.href.replace(/[^/]*$/, ""), onClose: () => setModal(null) })}
-      {qrPending && window.QROrderBanner && React.createElement(window.QROrderBanner, { order: qrPending, currency: settings.currency, onAccept: qrAccept, onDismiss: qrDismiss })}}
+      {qrPending && window.QROrderBanner && React.createElement(window.QROrderBanner, { order: qrPending, currency: settings.currency, onAccept: qrAccept, onDismiss: qrDismiss })}
       {toast && <Toast message={toast} onDone={() => setToast(null)}/>}
     </>
   );
