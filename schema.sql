@@ -66,6 +66,18 @@ CREATE TABLE IF NOT EXISTS pos_customers (
   last TEXT
 );
 
+-- 7. Create pos_qr_orders table (QR customer-placed orders)
+CREATE TABLE IF NOT EXISTS pos_qr_orders (
+  id TEXT PRIMARY KEY,
+  ts BIGINT NOT NULL,
+  table_num INT NOT NULL,
+  items JSONB NOT NULL,
+  note TEXT,
+  total NUMERIC NOT NULL,
+  currency TEXT DEFAULT '₹',
+  status TEXT NOT NULL DEFAULT 'pending'
+);
+
 -- Enable Row Level Security (RLS) - Optional (Disable or add policies for production)
 ALTER TABLE pos_settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_tables DISABLE ROW LEVEL SECURITY;
@@ -73,3 +85,4 @@ ALTER TABLE pos_menu DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_reservations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_customers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE pos_qr_orders DISABLE ROW LEVEL SECURITY;

@@ -2,8 +2,8 @@
 let supabaseClient = null;
 
 function getSupabaseConfig() {
-  const url = localStorage.getItem("supabase_url") || "";
-  const key = localStorage.getItem("supabase_anon_key") || "";
+  const url = window.SUPABASE_CONFIG?.url || localStorage.getItem("supabase_url") || "";
+  const key = window.SUPABASE_CONFIG?.key || localStorage.getItem("supabase_anon_key") || "";
   return { url, key };
 }
 

@@ -81,23 +81,99 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
       } catch {}
     };
 
-    const poll = () => {
+    const poll = async () => {
       if (pendingQROrder) return; // already showing one
+
+      // 1. Try local storage first
       try {
         const raw = localStorage.getItem(QR_ORDERS_KEY);
-        if (!raw) return;
-        const orders = JSON.parse(raw);
-        const s = seen();
-        const next = orders.find(o => !s.has(o.id) && o.status === "pending");
-        if (next) {
-          markSeen(next.id);
-          setPendingQROrder(next);
+        if (raw) {
+          const orders = JSON.parse(raw);
+          const s = seen();
+          const next = orders.find(o => !s.has(o.id) && o.status === "pending");
+          if (next) {
+            markSeen(next.id);
+            setPendingQROrder(next);
+            return;
+          }
         }
       } catch {}
+
+      // 2. Try Supabase if initialized
+      if (window.supabaseClient) {
+        try {
+          const { data, error } = await window.supabaseClient
+            .from("pos_qr_orders")
+            .select("*")
+            .eq("status", "pending")
+            .order("ts", { ascending: false });
+          if (data && data.length > 0) {
+            const s = seen();
+            const next = data.find(o => !s.has(o.id));
+            if (next) {
+              markSeen(next.id);
+              setPendingQROrder({
+                id: next.id,
+                ts: parseInt(next.ts),
+                tableNum: next.table_num,
+                items: next.items,
+                note: next.note || "",
+                total: parseFloat(next.total),
+                currency: next.currency || "₹",
+                status: next.status
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Failed to query QR orders from Supabase:", e);
+        }
+      }
     };
 
-    const interval = setInterval(poll, 1500);
-    return () => clearInterval(interval);
+    const interval = setInterval(poll, 2500);
+
+    // Supabase Realtime: get instant notifications for new QR orders
+    let realtimeSub = null;
+    if (window.supabaseClient) {
+      try {
+        realtimeSub = window.supabaseClient
+          .channel("qr-orders-realtime")
+          .on("postgres_changes", {
+            event: "INSERT",
+            schema: "public",
+            table: "pos_qr_orders",
+            filter: "status=eq.pending"
+          }, (payload) => {
+            const row = payload.new;
+            if (row && row.status === "pending") {
+              const s = seen();
+              if (!s.has(row.id)) {
+                markSeen(row.id);
+                setPendingQROrder({
+                  id: row.id,
+                  ts: parseInt(row.ts),
+                  tableNum: row.table_num,
+                  items: row.items,
+                  note: row.note || "",
+                  total: parseFloat(row.total),
+                  currency: row.currency || "₹",
+                  status: row.status
+                });
+              }
+            }
+          })
+          .subscribe();
+      } catch (e) {
+        console.warn("Supabase Realtime subscription failed:", e);
+      }
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (realtimeSub) {
+        try { window.supabaseClient.removeChannel(realtimeSub); } catch {}
+      }
+    };
   }, [pendingQROrder]);
 
   const acceptOrder = () => {
@@ -136,7 +212,7 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
     };
     setTables(prev => prev.map(t => t.id === updatedTable.id ? updatedTable : t));
 
-    // Mark order as accepted in QR orders store
+    // Mark order as accepted in local storage
     try {
       const raw = localStorage.getItem(QR_ORDERS_KEY);
       const orders = JSON.parse(raw || "[]");
@@ -144,13 +220,47 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
       localStorage.setItem(QR_ORDERS_KEY, JSON.stringify(updated));
     } catch {}
 
+    // Mark order as accepted in Supabase
+    if (window.supabaseClient) {
+      window.supabaseClient
+        .from("pos_qr_orders")
+        .update({ status: "accepted" })
+        .eq("id", o.id)
+        .then(({ error }) => {
+          if (error) console.error("Error updating QR order in Supabase:", error);
+        });
+    }
+
     showToast(`QR Order #${o.id} added to Table ${o.tableNum}`);
     // Auto-open KOT modal for this table
     setModal({ type: "kot", tableId: targetTable.id });
     setPendingQROrder(null);
   };
 
-  const dismissOrder = () => setPendingQROrder(null);
+  const dismissOrder = () => {
+    if (pendingQROrder) {
+      const o = pendingQROrder;
+      // Mark as ignored locally
+      try {
+        const raw = localStorage.getItem(QR_ORDERS_KEY);
+        const orders = JSON.parse(raw || "[]");
+        const updated = orders.map(ord => ord.id === o.id ? { ...ord, status: "ignored" } : ord);
+        localStorage.setItem(QR_ORDERS_KEY, JSON.stringify(updated));
+      } catch {}
+
+      // Mark as ignored in Supabase
+      if (window.supabaseClient) {
+        window.supabaseClient
+          .from("pos_qr_orders")
+          .update({ status: "ignored" })
+          .eq("id", o.id)
+          .then(({ error }) => {
+            if (error) console.error("Error updating QR order status:", error);
+          });
+      }
+    }
+    setPendingQROrder(null);
+  };
 
   return { pendingQROrder, acceptOrder, dismissOrder };
 }

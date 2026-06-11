@@ -355,6 +355,8 @@
     body { max-width: 600px; margin: 0 auto; }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 </head>
 <body>
 
@@ -442,8 +444,25 @@ let categories = [];
 let cart = []; // [{ id, name, price, qty, note, veg, img }]
 let restaurantName = "Vinay Cafe";
 
+// ── Supabase client for customer page ──────────────────────────────────────
+let customerSupabase = null;
+
+function initCustomerSupabase() {
+  const cfg = window.SUPABASE_CONFIG;
+  if (cfg && cfg.url && cfg.key && window.supabase) {
+    try {
+      customerSupabase = window.supabase.createClient(cfg.url, cfg.key);
+      console.log("Customer Supabase client initialized.");
+      return true;
+    } catch (e) {
+      console.error("Failed to init customer Supabase:", e);
+    }
+  }
+  return false;
+}
+
 // ── Init ────────────────────────────────────────────────────────────────────
-function init() {
+async function init() {
   // Get table number from URL ?table=X
   const params = new URLSearchParams(window.location.search);
   tableNum = params.get("table");
@@ -458,14 +477,58 @@ function init() {
     return;
   }
 
-  // Load POS state from localStorage
-  loadPOSState();
+  // Try Supabase first, then localStorage fallback
+  initCustomerSupabase();
+  await loadPOSState();
   renderApp();
   document.getElementById("loadingScreen").style.display = "none";
   document.getElementById("mainApp").style.display = "block";
 }
 
-function loadPOSState() {
+async function loadPOSState() {
+  // 1. Try Supabase first (works across devices)
+  if (customerSupabase) {
+    try {
+      // Load settings
+      const { data: settingsData } = await customerSupabase
+        .from("pos_settings").select("data").eq("id", "global").single();
+      if (settingsData && settingsData.data) {
+        currency = settingsData.data.currency || "₹";
+        restaurantName = settingsData.data.restaurantName || "Vinay Cafe";
+      }
+
+      // Load menu
+      const { data: menuData } = await customerSupabase
+        .from("pos_menu").select("*").eq("available", true);
+      if (menuData && menuData.length > 0) {
+        menuItems = menuData.map(m => ({
+          id: m.id,
+          cat: m.cat,
+          name: m.name,
+          desc: m.desc_text || "",
+          price: parseFloat(m.price),
+          veg: m.veg,
+          available: m.available,
+          stock: m.stock,
+          img: m.img || ""
+        }));
+        // Derive categories from menu items
+        const catSet = [...new Set(menuItems.map(i => i.cat))];
+        const catIcons = { starters:"🥗", mains:"🍽", grill:"🔥", pasta:"🍝", sides:"🥔", desserts:"🍰", drinks:"🍷", beverages:"☕", snacks:"🍿", soups:"🍜", salads:"🥗", biryani:"🍚", breads:"🫓", rice:"🍚", thali:"🍛" };
+        categories = catSet.map(c => ({
+          id: c,
+          name: c.charAt(0).toUpperCase() + c.slice(1),
+          icon: catIcons[c.toLowerCase()] || "🍴"
+        }));
+        console.log(`Loaded ${menuItems.length} items from Supabase.`);
+        return; // Successfully loaded from Supabase
+      }
+    } catch (e) {
+      console.warn("Supabase menu load failed, falling back to localStorage:", e);
+    }
+  }
+
+  // 2. Fallback: localStorage (same-device only)
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -479,7 +542,7 @@ function loadPOSState() {
     }
   } catch(e) {}
 
-  // Fallback: use embedded defaults if POS state is not available
+  // 3. Fallback: hardcoded defaults
   if (!menuItems.length) {
     loadFallbackMenu();
   }
@@ -658,8 +721,12 @@ function updateNote(idx, val) {
 }
 
 // ── Place Order ─────────────────────────────────────────────────────────────
-function placeOrder() {
+async function placeOrder() {
   if (!cart.length) return;
+  const btn = document.getElementById("placeBtn");
+  btn.disabled = true;
+  btn.textContent = "Sending…";
+
   const note = document.getElementById("orderNote").value.trim();
   const orderId = "QR" + Date.now().toString(36).toUpperCase().slice(-6);
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -672,23 +739,47 @@ function placeOrder() {
     note,
     total,
     currency,
-    status: "pending", // pending | seen | preparing | ready
+    status: "pending",
   };
 
-  // Write to localStorage so POS can pick it up
-  pushQROrder(order);
+  // Write to localStorage + Supabase
+  await pushQROrder(order);
 
   // Show success
   showSuccessScreen(order);
 }
 
-function pushQROrder(order) {
+async function pushQROrder(order) {
+  // 1. Always save to localStorage as fallback
   try {
     const raw = localStorage.getItem(QR_ORDERS_KEY);
     const existing = raw ? JSON.parse(raw) : [];
     existing.unshift(order);
     localStorage.setItem(QR_ORDERS_KEY, JSON.stringify(existing.slice(0, 100)));
   } catch(e) {}
+
+  // 2. Push to Supabase if connected
+  if (customerSupabase) {
+    try {
+      const { error } = await customerSupabase.from("pos_qr_orders").insert([{
+        id: order.id,
+        ts: order.ts,
+        table_num: order.tableNum,
+        items: order.items,
+        note: order.note || null,
+        total: order.total,
+        currency: order.currency,
+        status: order.status
+      }]);
+      if (error) {
+        console.error("Supabase insert error:", error);
+      } else {
+        console.log("QR order pushed to Supabase:", order.id);
+      }
+    } catch (e) {
+      console.error("Failed to push QR order to Supabase:", e);
+    }
+  }
 }
 
 function showSuccessScreen(order) {
