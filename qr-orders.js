@@ -160,17 +160,29 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
 // Requires: https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js
 function QRCodeModal({ tableNum, baseUrl, onClose }) {
   const canvasRef = React.useRef(null);
+  const [qrLoaded, setQrLoaded] = React.useState(!!window.QRCode);
   const orderUrl = `${baseUrl}customer-order.html?table=${tableNum}`;
 
   React.useEffect(() => {
-    if (!window.QRCode) return;
+    if (qrLoaded) return;
+    const interval = setInterval(() => {
+      if (window.QRCode) {
+        setQrLoaded(true);
+        clearInterval(interval);
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [qrLoaded]);
+
+  React.useEffect(() => {
+    if (!qrLoaded || !window.QRCode) return;
     if (!canvasRef.current) return;
     window.QRCode.toCanvas(canvasRef.current, orderUrl, {
       width: 240,
       margin: 2,
       color: { dark: "#000000", light: "#ffffff" },
     }, (err) => { if (err) console.error(err); });
-  }, [tableNum]);
+  }, [tableNum, qrLoaded]);
 
   const download = () => {
     const canvas = canvasRef.current;
@@ -202,7 +214,7 @@ function QRCodeModal({ tableNum, baseUrl, onClose }) {
               border: "1px solid var(--line)",
               display: "inline-block",
             }}>
-              {window.QRCode
+              {qrLoaded
                 ? <canvas ref={canvasRef}/>
                 : <div style={{ width: 240, height: 240, background: "var(--bg-3)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: 12 }}>
                     QRCode library loading…
