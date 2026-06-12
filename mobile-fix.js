@@ -192,8 +192,47 @@
   .history-row { grid-template-columns: 1fr 1fr !important; gap: 6px !important; padding: 10px 12px !important; font-size: 12px !important; }
   .history-filters { flex-wrap: wrap !important; gap: 6px !important; }
 
-  /* ── Summary ──────────────────────────────────────────────── */
-  .summary-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  /* ── Summary / Analytics ──────────────────────────────────── */
+  .summary-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .stat-card {
+    padding: 14px 14px !important;
+    border-radius: 10px !important;
+  }
+  .stat-value {
+    font-size: 22px !important;
+  }
+  .stat-label {
+    font-size: 9px !important;
+  }
+  .stat-sub {
+    font-size: 10px !important;
+  }
+
+  /* Analytics payment method bar */
+  .method-split-bar {
+    height: 10px !important;
+    border-radius: 5px !important;
+  }
+  .method-legend {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Hourly sales chart */
+  .workspace-inner .stat-card + div[style],
+  .workspace-inner > div > div[style*="grid"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Daily billing & top items side-by-side -> stacked on mobile */
+  .workspace-inner > div > div > div[style*="grid-template-columns: repeat(auto-fit"] {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
 
   /* ── Admin ────────────────────────────────────────────────── */
   .workspace-inner > div > div:first-child {
@@ -450,6 +489,7 @@
       { id: 'reservations', icon: 'clock',   label: 'Reserve' },
       { id: 'customers',    icon: 'users',   label: 'Guests'  },
       { id: 'history',      icon: 'history', label: 'Orders'  },
+      { id: 'summary',      icon: 'chart',   label: 'Analytics' },
       { id: 'kitchen',      icon: 'chef',    label: 'Kitchen' },
       { id: 'admin',        icon: 'chef',    label: 'Admin'   },
       { id: 'settings',     icon: 'settings', label: 'Settings' },
@@ -467,6 +507,7 @@
       clock:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
       users:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
       history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4M3 17V11h6"/></svg>',
+      chart:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
       chef:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>',
       settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     };
@@ -481,8 +522,12 @@
       btn.innerHTML = (ICONS[item.icon] || '') + `<span>${item.label}</span>`;
       btn.addEventListener('click', () => {
         const allNavBtns = document.querySelectorAll('.sidebar-nav .sidebar-btn');
-        const sidebarIndex = { floor:0, reservations:1, customers:2, history:3, summary:4, kitchen:5, admin:6, settings:7 }[item.id];
-        if (allNavBtns[sidebarIndex]) allNavBtns[sidebarIndex].click();
+        const viewIds = Array.from(allNavBtns).map((_, i) => {
+          const viewMap = ['floor','reservations','customers','history','summary','kitchen','admin','settings'];
+          return viewMap[i];
+        });
+        const sidebarIndex = viewIds.indexOf(item.id);
+        if (sidebarIndex >= 0 && allNavBtns[sidebarIndex]) allNavBtns[sidebarIndex].click();
         updateActive(item.id);
       });
       nav.appendChild(btn);
