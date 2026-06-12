@@ -744,6 +744,8 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
       )}
     </div>
   );
+};
+
 const TableQRCard = ({ tableNum, settings }) => {
   const canvasRef = React.useRef(null);
   const [qrLoaded, setQrLoaded] = React.useState(!!window.QRCode);
@@ -798,7 +800,7 @@ const TableQRCard = ({ tableNum, settings }) => {
           <div class="card">
             <h1>${settings.restaurantName}</h1>
             <p>Table ${tableNum}</p>
-            <img src="${canvas.toDataURL("image/png")}" width="200" height="200"/>
+            <img src="${canvas.toDataURL('image/png')}" width="200" height="200"/>
             <p>Scan to order directly from your table</p>
           </div>
         </body>
