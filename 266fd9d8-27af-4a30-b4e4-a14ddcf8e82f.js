@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
   logoUrl: "",
   receiptHeader: "Thank you for dining with us!",
   receiptFooter: "Follow us on Instagram @yourcafe",
+  qrNotificationSound: "loud",
 };
 
 const MENU_CATEGORIES = [

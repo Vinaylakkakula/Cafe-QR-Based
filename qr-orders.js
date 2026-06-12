@@ -68,6 +68,20 @@ function QROrderBanner({ order, onAccept, onDismiss, currency }) {
 // Play a clean, loud notification sound (impossible to miss in a kitchen/busy admin panel)
 function playNotificationSound() {
   try {
+    // 1. Get sound preference from local storage
+    let soundPreference = "loud";
+    try {
+      const stored = localStorage.getItem("ember_pos_v2");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.settings && parsed.settings.qrNotificationSound) {
+          soundPreference = parsed.settings.qrNotificationSound;
+        }
+      }
+    } catch (e) {}
+
+    if (soundPreference === "silent") return;
+
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
@@ -100,18 +114,24 @@ function playNotificationSound() {
       osc.stop(startTime + duration);
     };
 
-    // Urgent 3-beep loud pattern (high pitch, mix of triangle for punch and sine for depth)
-    // Beep 1
-    playTone(1000, now, 0.25, 0.6, 'triangle');
-    playTone(2000, now, 0.25, 0.3, 'sine');
-    
-    // Beep 2
-    playTone(1000, now + 0.3, 0.25, 0.6, 'triangle');
-    playTone(2000, now + 0.3, 0.25, 0.3, 'sine');
-    
-    // Beep 3
-    playTone(1200, now + 0.6, 0.4, 0.7, 'triangle');
-    playTone(2400, now + 0.6, 0.4, 0.3, 'sine');
+    if (soundPreference === "soft") {
+      // Elegant soft chime: E6 then G#6
+      playTone(1318.51, now, 0.6, 0.15, 'sine');
+      playTone(1661.22, now + 0.12, 0.8, 0.12, 'sine');
+    } else {
+      // Urgent 3-beep loud pattern (high pitch, mix of triangle for punch and sine for depth)
+      // Beep 1
+      playTone(1000, now, 0.25, 0.6, 'triangle');
+      playTone(2000, now, 0.25, 0.3, 'sine');
+      
+      // Beep 2
+      playTone(1000, now + 0.3, 0.25, 0.6, 'triangle');
+      playTone(2000, now + 0.3, 0.25, 0.3, 'sine');
+      
+      // Beep 3
+      playTone(1200, now + 0.6, 0.4, 0.7, 'triangle');
+      playTone(2400, now + 0.6, 0.4, 0.3, 'sine');
+    }
   } catch (e) {
     console.warn("Failed to play notification sound:", e);
   }

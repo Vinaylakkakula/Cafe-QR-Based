@@ -249,6 +249,15 @@ const SettingsView = ({ settings, onChange, onResetTables }) => {
             </select>
           </div>
           <div className="setting-field">
+            <label>QR Order Notification Sound</label>
+            <select value={settings.qrNotificationSound || "loud"} onChange={(e) => upd({ qrNotificationSound: e.target.value })}
+              style={{background:'var(--bg-2)', border:'1px solid var(--line)', borderRadius:6, padding:'10px 12px', fontSize:13, color:'var(--text)', width:'100%'}}>
+              <option value="loud">🔊 Loud Urgent Alarm</option>
+              <option value="soft">🔔 Soft Elegant Chime</option>
+              <option value="silent">🔇 Silent (No Sound)</option>
+            </select>
+          </div>
+          <div className="setting-field">
             <label>Logo Image URL</label>
             <input value={settings.logoUrl || ""} onChange={(e) => upd({ logoUrl: e.target.value })} placeholder="e.g. https://domain.com/logo.png"/>
           </div>
