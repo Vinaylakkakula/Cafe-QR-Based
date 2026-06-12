@@ -130,6 +130,8 @@ const SummaryView = ({ orders, settings }) => {
         )}
       </div>
 
+      <SalesByHourChart orders={orders} settings={settings}/>
+
       <div style={{marginTop:24}}>
         <div className="section-title" style={{fontSize:15, marginBottom:10}}>Top Items</div>
         <TopItemsTable orders={orders} settings={settings}/>
@@ -233,6 +235,33 @@ const SettingsView = ({ settings, onChange, onResetTables }) => {
           </div>
         </div>
         <div className="divider"/>
+        <h3 style={{fontSize:14, fontWeight:600, marginBottom:12, color:'var(--amber-bright)'}}>🎨 Brand & White-Label Customization</h3>
+        <div className="settings-grid" style={{marginBottom: 20}}>
+          <div className="setting-field">
+            <label>Brand Theme Color</label>
+            <select value={settings.themeColor || "amber"} onChange={(e) => upd({ themeColor: e.target.value })}
+              style={{background:'var(--bg-2)', border:'1px solid var(--line)', borderRadius:6, padding:'10px 12px', fontSize:13, color:'var(--text)', width:'100%'}}>
+              <option value="amber">🍊 Amber Orange</option>
+              <option value="green">🟢 Emerald Green</option>
+              <option value="blue">🔵 Ocean Blue</option>
+              <option value="violet">🟣 Royal Indigo</option>
+              <option value="red">🔴 Crimson Red</option>
+            </select>
+          </div>
+          <div className="setting-field">
+            <label>Logo Image URL</label>
+            <input value={settings.logoUrl || ""} onChange={(e) => upd({ logoUrl: e.target.value })} placeholder="e.g. https://domain.com/logo.png"/>
+          </div>
+          <div className="setting-field full">
+            <label>Receipt Custom Header Note</label>
+            <input value={settings.receiptHeader || ""} onChange={(e) => upd({ receiptHeader: e.target.value })} placeholder="e.g. Thank you for dining with us!"/>
+          </div>
+          <div className="setting-field full">
+            <label>Receipt Custom Footer Note</label>
+            <input value={settings.receiptFooter || ""} onChange={(e) => upd({ receiptFooter: e.target.value })} placeholder="e.g. Follow us on Instagram @yourcafe"/>
+          </div>
+        </div>
+        <div className="divider"/>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom: 20}}>
           <div className="opt-toggle-row" style={{padding:'10px 12px', background:'var(--bg-2)', borderRadius:8}}>
             <div>
@@ -279,4 +308,73 @@ const SettingsView = ({ settings, onChange, onResetTables }) => {
   );
 };
 
-Object.assign(window, { HistoryView, SummaryView, SettingsView });
+const SalesByHourChart = ({ orders, settings }) => {
+  const hourlyData = Array(24).fill(0);
+  orders.forEach(o => {
+    const hr = new Date(o.ts).getHours();
+    hourlyData[hr] += o.payment.amount;
+  });
+
+  let startHour = 11;
+  let endHour = 23;
+  
+  const activeHours = [];
+  hourlyData.forEach((val, hr) => { if (val > 0) activeHours.push(hr); });
+  if (activeHours.length > 0) {
+    startHour = Math.max(0, Math.min(...activeHours) - 1);
+    endHour = Math.min(23, Math.max(...activeHours) + 1);
+  }
+  
+  const displayHours = [];
+  for (let i = startHour; i <= endHour; i++) displayHours.push(i);
+
+  const maxVal = Math.max(...hourlyData.filter((_, hr) => hr >= startHour && hr <= endHour), 100);
+
+  const formatHourLabel = (h) => {
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hr = h % 12 === 0 ? 12 : h % 12;
+    return `${hr} ${ampm}`;
+  };
+
+  return (
+    <div style={{background:'var(--bg-1)', border:'1px solid var(--line)', borderRadius:12, padding:20, marginTop:20}}>
+      <div style={{fontSize:13, fontWeight:600, color:'var(--text-dim)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:16}}>Hourly Sales Trend</div>
+      {orders.length === 0 ? (
+        <div style={{padding:'20px 0', color:'var(--text-muted)', fontSize:12, textAlign:'center'}}>No sales data yet.</div>
+      ) : (
+        <div style={{display:'flex', flexDirection:'column', gap:10}}>
+          <div style={{display:'flex', height:180, alignItems:'flex-end', gap:8, borderBottom:'1px solid var(--line)', paddingBottom:6, paddingLeft:10, paddingRight:10}}>
+            {displayHours.map(hr => {
+              const val = hourlyData[hr];
+              const pct = (val / maxVal) * 100;
+              return (
+                <div key={hr} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', height:'100%', justifyContent:'flex-end', position:'relative'}}>
+                  <div style={{position:'absolute', top:-22, fontSize:10, fontFamily:'JetBrains Mono, monospace', color:'var(--amber-bright)', opacity: val > 0 ? 1 : 0}}>
+                    {settings.currency}{val.toFixed(0)}
+                  </div>
+                  <div style={{
+                    width:'100%',
+                    height:`${pct}%`,
+                    background: val > 0 ? 'linear-gradient(180deg, var(--amber), rgba(242, 164, 58, 0.3))' : 'var(--bg-3)',
+                    borderRadius:'4px 4px 0 0',
+                    transition:'height 0.3s ease',
+                    minHeight: val > 0 ? 4 : 0
+                  }}/>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{display:'flex', gap:8, paddingLeft:10, paddingRight:10}}>
+            {displayHours.map(hr => (
+              <div key={hr} style={{flex:1, textAlign:'center', fontSize:9, color:'var(--text-muted)', whiteSpace:'nowrap'}}>
+                {formatHourLabel(hr)}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+Object.assign(window, { HistoryView, SummaryView, SettingsView, SalesByHourChart });

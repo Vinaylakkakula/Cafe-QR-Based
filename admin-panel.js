@@ -217,7 +217,7 @@ const DeleteConfirmModal = ({ title, desc, onClose, onConfirm }) => (
 
 // ---- Admin Panel Main View ----------------------------------
 
-const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders, settings, showToast }) => {
+const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders, settings, showToast, tables = [] }) => {
   const [tab, setTab] = React.useState("menu");
   const [itemModal, setItemModal] = React.useState(null); // null | { mode: "add"|"edit", item? }
   const [catModal, setCatModal] = React.useState(null);   // null | { mode: "add"|"edit", cat? }
@@ -290,6 +290,7 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
   const adminTabs = [
     { id: "menu", label: "Menu Items", icon: "chef" },
     { id: "categories", label: "Categories", icon: "filter" },
+    { id: "qrcodes", label: "Table QR Codes", icon: "grid" },
     { id: "dashboard", label: "Admin Dashboard", icon: "chart" },
   ];
 
@@ -638,6 +639,77 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
             </div>
           </div>
         </div>
+      {/* ===== TABLE QR CODES TAB ===== */}
+      {tab === "qrcodes" && (
+        <div>
+          <div className="section-head">
+            <div>
+              <div className="section-title">Table QR Codes</div>
+              <div className="section-sub">Generate, download or print digital ordering QR codes for tables</div>
+            </div>
+            <button className="btn btn-primary" onClick={() => {
+              const win = window.open("", "_blank");
+              win.document.write(`
+                <html>
+                  <head>
+                    <title>All Table QR Codes</title>
+                    <style>
+                      body { font-family: sans-serif; padding: 20px; }
+                      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+                      .card { border: 2px solid #000; border-radius: 12px; padding: 16px; text-align: center; page-break-inside: avoid; }
+                      h1 { margin: 0 0 5px 0; font-size: 20px; }
+                      p { margin: 5px 0; font-size: 12px; color: #555; }
+                    </style>
+                  </head>
+                  <body>
+                    <h2 style="text-align:center; margin-bottom:30px;">\${settings.restaurantName} — QR Table Cards</h2>
+                    <div class="grid" id="qr-grid"></div>
+                    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+                    <script>
+                      const baseUrl = window.location.href.replace(/[^/]*$/, "").replace("about:blank", window.opener.location.href.replace(/[^/]*$/, ""));
+                      const tables = \${JSON.stringify(tables)};
+                      const grid = document.getElementById("qr-grid");
+                      
+                      Promise.all(tables.map(t => {
+                        const card = document.createElement("div");
+                        card.className = "card";
+                        const title = document.createElement("h1");
+                        title.innerText = "\${settings.restaurantName}";
+                        const label = document.createElement("p");
+                        label.innerText = "Table " + t.num;
+                        const canvas = document.createElement("canvas");
+                        const sub = document.createElement("p");
+                        sub.innerText = "Scan to browse menu & order";
+                        
+                        card.appendChild(title);
+                        card.appendChild(label);
+                        card.appendChild(canvas);
+                        card.appendChild(sub);
+                        grid.appendChild(card);
+                        
+                        return QRCode.toCanvas(canvas, baseUrl + "customer-order.html?table=" + t.num, {
+                          width: 180,
+                          margin: 1
+                        });
+                      })).then(() => {
+                        setTimeout(() => { window.print(); window.close(); }, 500);
+                      });
+                    </script>
+                  </body>
+                </html>
+              `);
+              win.document.close();
+            }}>
+              <Icon name="print" size={13} /> Print All QR Codes
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14 }}>
+            {tables.map(t => (
+              <TableQRCard key={t.id} tableNum={t.num} settings={settings} />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ===== MODALS ===== */}
@@ -671,6 +743,81 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
       )}
     </div>
   );
+const TableQRCard = ({ tableNum, settings }) => {
+  const canvasRef = React.useRef(null);
+  const [qrLoaded, setQrLoaded] = React.useState(!!window.QRCode);
+  const baseUrl = window.location.href.replace(/[^/]*$/, "");
+  const orderUrl = `${baseUrl}customer-order.html?table=${tableNum}`;
+
+  React.useEffect(() => {
+    if (qrLoaded) return;
+    const interval = setInterval(() => {
+      if (window.QRCode) {
+        setQrLoaded(true);
+        clearInterval(interval);
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, [qrLoaded]);
+
+  React.useEffect(() => {
+    if (!qrLoaded || !window.QRCode || !canvasRef.current) return;
+    window.QRCode.toCanvas(canvasRef.current, orderUrl, {
+      width: 140,
+      margin: 1,
+      color: { dark: "#000000", light: "#ffffff" },
+    }, (err) => { if (err) console.error(err); });
+  }, [tableNum, qrLoaded]);
+
+  const download = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `table-${tableNum}-qr.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
+  const printSingle = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const win = window.open("", "_blank");
+    win.document.write(`
+      <html>
+        <head>
+          <title>Print QR Table \${tableNum}</title>
+          <style>
+            body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; margin: 0; }
+            .card { border: 2px solid #000; border-radius: 12px; padding: 24px; text-align: center; max-width: 300px; }
+            h1 { margin: 0 0 10px 0; font-size: 24px; }
+            p { margin: 10px 0; font-size: 14px; color: #555; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <div class="card">
+            <h1>\${settings.restaurantName}</h1>
+            <p>Table \${tableNum}</p>
+            <img src="\${canvas.toDataURL("image/png")}" width="200" height="200"/>
+            <p>Scan to order directly from your table</p>
+          </div>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
+  return (
+    <div style={{background:'var(--bg-2)', border:'1px solid var(--line)', borderRadius:12, padding:16, display:'flex', flexDirection:'column', alignItems:'center', gap:10}}>
+      <div style={{fontWeight:700, fontSize:15}}>Table T{tableNum}</div>
+      <div style={{background:'#fff', padding:8, borderRadius:8, display:'inline-block'}}>
+        <canvas ref={canvasRef} style={{width:120, height:120, display:'block'}}/>
+      </div>
+      <div style={{display:'flex', gap:6, width:'100%'}}>
+        <button className="btn btn-secondary" style={{flex:1, padding:'6px 0', fontSize:11}} onClick={download}>⬇ PNG</button>
+        <button className="btn btn-primary" style={{flex:1, padding:'6px 0', fontSize:11}} onClick={printSingle}>🖨 Print</button>
+      </div>
+    </div>
+  );
 };
 
-Object.assign(window, { AdminPanel, MenuItemModal, CategoryModal, DeleteConfirmModal });
+Object.assign(window, { AdminPanel, MenuItemModal, CategoryModal, DeleteConfirmModal, TableQRCard });

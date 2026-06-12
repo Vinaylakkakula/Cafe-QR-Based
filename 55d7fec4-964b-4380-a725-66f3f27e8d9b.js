@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { id: "customers", icon: "users", label: "Customers" },
   { id: "history", icon: "history", label: "Orders" },
   { id: "summary", icon: "chart", label: "Analytics" },
+  { id: "kitchen", icon: "chef", label: "Kitchen" },
   { id: "admin", icon: "chef", label: "Admin" },
   { id: "settings", icon: "gear", label: "Settings" },
 ];
@@ -44,6 +45,36 @@ function App({ authUser, onLogout }) {
 
   React.useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
   
+  // Apply brand colors and title dynamically
+  React.useEffect(() => {
+    const color = settings.themeColor || "amber";
+    const palettes = {
+      amber: { accent: "#f2a43a", bright: "#ffb84a", dim: "#3a2a12", soft: "rgba(242, 164, 58, 0.12)" },
+      green: { accent: "#6bbf7b", bright: "#83db93", dim: "#123a1a", soft: "rgba(107, 191, 123, 0.12)" },
+      blue: { accent: "#67a2d9", bright: "#8ac0f5", dim: "#12243a", soft: "rgba(103, 162, 217, 0.12)" },
+      violet: { accent: "#a88ad9", bright: "#c5aaf2", dim: "#27123a", soft: "rgba(168, 138, 217, 0.12)" },
+      red: { accent: "#e26060", bright: "#fca4a4", dim: "#3a1212", soft: "rgba(226, 96, 96, 0.12)" }
+    };
+    const theme = palettes[color] || palettes.amber;
+    let styleEl = document.getElementById("dynamic-theme-style");
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = "dynamic-theme-style";
+      document.head.appendChild(styleEl);
+    }
+    styleEl.innerHTML = `
+      :root {
+        --amber: ${theme.accent} !important;
+        --amber-bright: ${theme.bright} !important;
+        --amber-dim: ${theme.dim} !important;
+        --amber-soft: ${theme.soft} !important;
+      }
+      .sidebar-brand {
+        background: linear-gradient(135deg, ${theme.accent}, ${theme.bright}) !important;
+      }
+    `;
+    document.title = (settings.restaurantName || "POS") + " — Restaurant Point of Sale";
+  }, [settings.themeColor, settings.restaurantName]);
   // Load state from Supabase if available
   React.useEffect(() => {
     async function loadFromDb() {
@@ -177,6 +208,7 @@ function App({ authUser, onLogout }) {
     customers: { main: "Customers & Loyalty", sub: "Regulars, tiers, and rewards" },
     history: { main: "Orders", sub: "All transactions from this session" },
     summary: { main: "Analytics", sub: `${formatDate(now)} · ${getShift(now)} shift` },
+    kitchen: { main: "Kitchen Display System", sub: "Real-time kitchen order preparation and queue" },
     admin: { main: "Admin Panel", sub: "Manage menu items, categories & inventory" },
     settings: { main: "Settings", sub: "Configure restaurant & POS behaviour" },
   }[view];
@@ -188,7 +220,15 @@ function App({ authUser, onLogout }) {
   return (
     <>
       <aside className="sidebar no-print">
-        <div className="sidebar-brand" title="Vinay Cafe POS" style={{overflow:"visible", fontSize:0}}><svg width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="13" cy="13" r="13" fill="#1a0f00"/><text x="13" y="17" textAnchor="middle" fontFamily="Inter,sans-serif" fontWeight="800" fontSize="11" fill="#f9a825">VC</text></svg></div>
+        <div className="sidebar-brand" title={settings.restaurantName} style={{overflow:"hidden", display: "grid", placeItems: "center"}}>
+          {settings.logoUrl ? (
+            <img src={settings.logoUrl} alt="" style={{width: "100%", height: "100%", objectFit: "cover"}} />
+          ) : (
+            <span style={{color: "#1a0f00", fontWeight: 800, fontSize: 14}}>
+              {(settings.restaurantName || "VC").split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+            </span>
+          )}
+        </div>
         <nav className="sidebar-nav">
           {NAV_ITEMS.filter(item => {
               const perms = window._authUtils?.ROLE_PERMS?.[authUser?.role];
@@ -197,6 +237,7 @@ function App({ authUser, onLogout }) {
                         : item.id === 'customers'    ? 'customers'
                         : item.id === 'history'      ? 'history'
                         : item.id === 'summary'      ? 'summary'
+                        : item.id === 'kitchen'      ? 'kitchen'
                         : item.id === 'admin'        ? 'admin'
                         : item.id === 'settings'     ? 'settings'
                         : 'floor';
@@ -321,7 +362,8 @@ function App({ authUser, onLogout }) {
             <div className="workspace-inner" style={{maxWidth: 1200, margin:'0 auto', width:'100%'}}>
               {view === "reservations" && <ReservationsView reservations={reservations} tables={tables} onCheckIn={seatReservation} onCancel={(r) => { setReservations(prev => prev.map(x => x.id === r.id ? {...x, status:"cancelled"} : x)); showToast("Reservation cancelled"); }} onAdd={() => setModal({ type: "new-res" })}/>}
               {view === "customers" && <CustomersView customers={customers} onAdd={() => setModal({ type: "new-customer" })}/>}
-              {view === "admin" && <AdminPanel menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} orders={orders} settings={settings} showToast={showToast}/>}
+              {view === "kitchen" && <KitchenDisplay tables={tables} onUpdateTable={updateTable} settings={settings} showToast={showToast}/>}
+              {view === "admin" && <AdminPanel menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} orders={orders} settings={settings} showToast={showToast} tables={tables}/>}
               {view === "history" && <HistoryView orders={orders} settings={settings} onReprint={(o) => setModal({ type: "receipt", order: o })}/>}
               {view === "summary" && <SummaryView orders={orders} settings={settings}/>}
               {view === "settings" && <SettingsView settings={settings} onChange={setSettings} onResetTables={handleResetTables}/>}

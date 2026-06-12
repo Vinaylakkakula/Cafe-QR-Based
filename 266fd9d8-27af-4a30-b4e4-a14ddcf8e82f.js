@@ -23,6 +23,10 @@ const DEFAULT_SETTINGS = {
   serviceChargeEnabled: true,
   tableCount: 16,
   heroImage: window.__resources["hero"],
+  themeColor: "amber",
+  logoUrl: "",
+  receiptHeader: "Thank you for dining with us!",
+  receiptFooter: "Follow us on Instagram @yourcafe",
 };
 
 const MENU_CATEGORIES = [

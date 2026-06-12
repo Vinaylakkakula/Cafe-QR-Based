@@ -297,6 +297,7 @@ const ReceiptModal = ({ order, settings, onClose }) => {
           <div ref={receiptRef} className="receipt">
             <div className="receipt-head">
               <div className="receipt-name">{settings.restaurantName}</div>
+              {settings.receiptHeader && <div style={{fontSize:11, fontWeight:600, marginBottom:4}}>{settings.receiptHeader}</div>}
               <div className="receipt-addr">
                 {settings.address.split("\n").map((l, i) => <div key={i}>{l}</div>)}
               </div>
@@ -339,9 +340,12 @@ const ReceiptModal = ({ order, settings, onClose }) => {
               ))}
             </div>
             <div className="receipt-foot">
-              Thank you for dining with us!<br/>
-              {settings.restaurantName}<br/>
-              · {new Date(order.ts).toLocaleTimeString()} ·
+              {settings.receiptFooter ? (
+                <div>{settings.receiptFooter}</div>
+              ) : (
+                <>Thank you for dining with us!<br/>{settings.restaurantName}</>
+              )}
+              <div style={{fontSize:10, marginTop:4, opacity:0.8}}>· {new Date(order.ts).toLocaleTimeString()} ·</div>
             </div>
           </div>
         </div>
