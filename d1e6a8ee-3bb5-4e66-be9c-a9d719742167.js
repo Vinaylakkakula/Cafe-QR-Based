@@ -405,8 +405,22 @@ const SalesByHourChart = ({ orders, settings }) => {
   const formatHourLabel = (h) => {
     const ampm = h >= 12 ? 'PM' : 'AM';
     const hr = h % 12 === 0 ? 12 : h % 12;
-    return `${hr} ${ampm}`;
+    return `${hr}${ampm}`;
   };
+
+  // Compact number formatting to avoid overlap
+  const formatCompact = (v) => {
+    if (v >= 10000) return (v / 1000).toFixed(0) + 'K';
+    if (v >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return v.toFixed(0);
+  };
+
+  const [hoveredHr, setHoveredHr] = React.useState(null);
+
+  // Determine min bar width based on column count for mobile
+  const barCount = displayHours.length;
+  const needsScroll = barCount > 8;
+  const minBarW = needsScroll ? 44 : undefined;
 
   return (
     <div style={{background:'var(--bg-1)', border:'1px solid var(--line)', borderRadius:12, padding:20, marginTop:20}}>
@@ -414,34 +428,73 @@ const SalesByHourChart = ({ orders, settings }) => {
       {orders.length === 0 ? (
         <div style={{padding:'20px 0', color:'var(--text-muted)', fontSize:12, textAlign:'center'}}>No sales data yet.</div>
       ) : (
-        <div style={{display:'flex', flexDirection:'column', gap:10}}>
-          <div style={{display:'flex', height:180, alignItems:'flex-end', gap:8, borderBottom:'1px solid var(--line)', paddingBottom:6, paddingLeft:10, paddingRight:10}}>
-            {displayHours.map(hr => {
-              const val = hourlyData[hr];
-              const pct = (val / maxVal) * 100;
-              return (
-                <div key={hr} style={{flex:1, display:'flex', flexDirection:'column', alignItems:'center', height:'100%', justifyContent:'flex-end', position:'relative'}}>
-                  <div style={{position:'absolute', top:-22, fontSize:10, fontFamily:'JetBrains Mono, monospace', color:'var(--amber-bright)', opacity: val > 0 ? 1 : 0}}>
-                    {settings.currency}{val.toFixed(0)}
+        <div style={{overflowX: needsScroll ? 'auto' : 'visible', WebkitOverflowScrolling:'touch', margin:'0 -10px', padding:'0 10px'}}>
+          <div style={{display:'flex', flexDirection:'column', gap:6, minWidth: needsScroll ? barCount * minBarW : 'auto'}}>
+            <div style={{display:'flex', height:200, alignItems:'flex-end', gap:4, borderBottom:'1px solid var(--line)', paddingBottom:6, paddingTop:28, position:'relative'}}>
+              {displayHours.map(hr => {
+                const val = hourlyData[hr];
+                const pct = (val / maxVal) * 100;
+                const isHovered = hoveredHr === hr;
+                return (
+                  <div
+                    key={hr}
+                    style={{flex: minBarW ? `0 0 ${minBarW}px` : 1, display:'flex', flexDirection:'column', alignItems:'center', height:'100%', justifyContent:'flex-end', position:'relative', cursor: val > 0 ? 'pointer' : 'default'}}
+                    onMouseEnter={() => val > 0 && setHoveredHr(hr)}
+                    onMouseLeave={() => setHoveredHr(null)}
+                    onTouchStart={() => val > 0 && setHoveredHr(hr === hoveredHr ? null : hr)}
+                  >
+                    {/* Value label — positioned above the bar, not at fixed top */}
+                    {val > 0 && (
+                      <div style={{
+                        marginBottom: 4,
+                        fontSize: isHovered ? 11 : 9,
+                        fontFamily:'JetBrains Mono, monospace',
+                        color: isHovered ? 'var(--text)' : 'var(--amber-bright)',
+                        whiteSpace:'nowrap',
+                        fontWeight: isHovered ? 700 : 500,
+                        transition:'all .15s',
+                        textAlign:'center',
+                        lineHeight: 1,
+                        flexShrink: 0,
+                      }}>
+                        {isHovered ? `${settings.currency}${val.toFixed(0)}` : `${formatCompact(val)}`}
+                      </div>
+                    )}
+                    {/* Bar */}
+                    <div style={{
+                      width:'100%',
+                      maxWidth: 40,
+                      height:`${pct}%`,
+                      background: val > 0
+                        ? isHovered
+                          ? 'linear-gradient(180deg, var(--amber-bright), var(--amber))'
+                          : 'linear-gradient(180deg, var(--amber), rgba(242, 164, 58, 0.3))'
+                        : 'var(--bg-3)',
+                      borderRadius:'4px 4px 0 0',
+                      transition:'height 0.3s ease, background .15s',
+                      minHeight: val > 0 ? 4 : 0,
+                      transform: isHovered ? 'scaleX(1.1)' : 'scaleX(1)',
+                    }}/>
                   </div>
-                  <div style={{
-                    width:'100%',
-                    height:`${pct}%`,
-                    background: val > 0 ? 'linear-gradient(180deg, var(--amber), rgba(242, 164, 58, 0.3))' : 'var(--bg-3)',
-                    borderRadius:'4px 4px 0 0',
-                    transition:'height 0.3s ease',
-                    minHeight: val > 0 ? 4 : 0
-                  }}/>
+                );
+              })}
+            </div>
+            {/* Hour labels */}
+            <div style={{display:'flex', gap:4}}>
+              {displayHours.map(hr => (
+                <div key={hr} style={{
+                  flex: minBarW ? `0 0 ${minBarW}px` : 1,
+                  textAlign:'center',
+                  fontSize:9,
+                  color: hoveredHr === hr ? 'var(--amber-bright)' : 'var(--text-muted)',
+                  whiteSpace:'nowrap',
+                  fontWeight: hoveredHr === hr ? 600 : 400,
+                  transition:'color .15s',
+                }}>
+                  {formatHourLabel(hr)}
                 </div>
-              );
-            })}
-          </div>
-          <div style={{display:'flex', gap:8, paddingLeft:10, paddingRight:10}}>
-            {displayHours.map(hr => (
-              <div key={hr} style={{flex:1, textAlign:'center', fontSize:9, color:'var(--text-muted)', whiteSpace:'nowrap'}}>
-                {formatHourLabel(hr)}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
