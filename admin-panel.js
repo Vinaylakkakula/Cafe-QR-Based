@@ -639,6 +639,7 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
             </div>
           </div>
         </div>
+      )}
       {/* ===== TABLE QR CODES TAB ===== */}
       {tab === "qrcodes" && (
         <div>
