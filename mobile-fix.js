@@ -450,6 +450,7 @@
       { id: 'reservations', icon: 'clock',   label: 'Reserve' },
       { id: 'customers',    icon: 'users',   label: 'Guests'  },
       { id: 'history',      icon: 'history', label: 'Orders'  },
+      { id: 'kitchen',      icon: 'chef',    label: 'Kitchen' },
       { id: 'admin',        icon: 'chef',    label: 'Admin'   },
     ];
     // Filter by role perms
@@ -478,7 +479,7 @@
       btn.innerHTML = (ICONS[item.icon] || '') + `<span>${item.label}</span>`;
       btn.addEventListener('click', () => {
         const allNavBtns = document.querySelectorAll('.sidebar-nav .sidebar-btn');
-        const sidebarIndex = { floor:0, reservations:1, customers:2, history:3, admin:5 }[item.id];
+        const sidebarIndex = { floor:0, reservations:1, customers:2, history:3, summary:4, kitchen:5, admin:6, settings:7 }[item.id];
         if (allNavBtns[sidebarIndex]) allNavBtns[sidebarIndex].click();
         updateActive(item.id);
       });
@@ -499,7 +500,7 @@
       if (activeSidebar) {
         const sidebarBtns = [...document.querySelectorAll('.sidebar-nav .sidebar-btn')];
         const idx = sidebarBtns.indexOf(activeSidebar);
-        const viewMap = ['floor','reservations','customers','history','summary','admin','settings'];
+        const viewMap = ['floor','reservations','customers','history','summary','kitchen','admin','settings'];
         const currentView = viewMap[idx];
         if (currentView) updateActive(currentView);
       }

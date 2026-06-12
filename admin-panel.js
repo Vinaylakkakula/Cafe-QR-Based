@@ -663,19 +663,19 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
                     </style>
                   </head>
                   <body>
-                    <h2 style="text-align:center; margin-bottom:30px;">\${settings.restaurantName} — QR Table Cards</h2>
+                    <h2 style="text-align:center; margin-bottom:30px;">${settings.restaurantName} — QR Table Cards</h2>
                     <div class="grid" id="qr-grid"></div>
                     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
                     <script>
                       const baseUrl = window.location.href.replace(/[^/]*$/, "").replace("about:blank", window.opener.location.href.replace(/[^/]*$/, ""));
-                      const tables = \${JSON.stringify(tables)};
+                      const tables = ${JSON.stringify(tables)};
                       const grid = document.getElementById("qr-grid");
                       
                       Promise.all(tables.map(t => {
                         const card = document.createElement("div");
                         card.className = "card";
                         const title = document.createElement("h1");
-                        title.innerText = "\${settings.restaurantName}";
+                        title.innerText = "${settings.restaurantName}";
                         const label = document.createElement("p");
                         label.innerText = "Table " + t.num;
                         const canvas = document.createElement("canvas");
@@ -786,7 +786,7 @@ const TableQRCard = ({ tableNum, settings }) => {
     win.document.write(`
       <html>
         <head>
-          <title>Print QR Table \${tableNum}</title>
+          <title>Print QR Table ${tableNum}</title>
           <style>
             body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; margin: 0; }
             .card { border: 2px solid #000; border-radius: 12px; padding: 24px; text-align: center; max-width: 300px; }
@@ -796,9 +796,9 @@ const TableQRCard = ({ tableNum, settings }) => {
         </head>
         <body onload="window.print(); window.close();">
           <div class="card">
-            <h1>\${settings.restaurantName}</h1>
-            <p>Table \${tableNum}</p>
-            <img src="\${canvas.toDataURL("image/png")}" width="200" height="200"/>
+            <h1>${settings.restaurantName}</h1>
+            <p>Table ${tableNum}</p>
+            <img src="${canvas.toDataURL("image/png")}" width="200" height="200"/>
             <p>Scan to order directly from your table</p>
           </div>
         </body>
