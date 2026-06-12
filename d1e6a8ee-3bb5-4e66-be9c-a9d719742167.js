@@ -132,10 +132,73 @@ const SummaryView = ({ orders, settings }) => {
 
       <SalesByHourChart orders={orders} settings={settings}/>
 
-      <div style={{marginTop:24}}>
-        <div className="section-title" style={{fontSize:15, marginBottom:10}}>Top Items</div>
-        <TopItemsTable orders={orders} settings={settings}/>
+      <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(340px, 1fr))', gap:20, marginTop:24}}>
+        <div>
+          <div className="section-title" style={{fontSize:15, marginBottom:10}}>📅 Daily wise Billing</div>
+          <DailyWiseBillingTable orders={orders} settings={settings}/>
+        </div>
+        <div>
+          <div className="section-title" style={{fontSize:15, marginBottom:10}}>🔥 Top Items</div>
+          <TopItemsTable orders={orders} settings={settings}/>
+        </div>
       </div>
+    </div>
+  );
+};
+
+const DailyWiseBillingTable = ({ orders, settings }) => {
+  const getLocalDateString = (ts) => {
+    const d = new Date(ts);
+    return d.toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' });
+  };
+
+  const dailyBilling = {};
+  orders.forEach(o => {
+    const dateStr = getLocalDateString(o.ts);
+    if (!dailyBilling[dateStr]) {
+      dailyBilling[dateStr] = { dateStr, revenue: 0, count: 0, items: 0 };
+    }
+    dailyBilling[dateStr].revenue += o.payment.amount;
+    dailyBilling[dateStr].count += 1;
+    dailyBilling[dateStr].items += o.split.items.reduce((s, i) => s + i.qty, 0);
+  });
+
+  const rows = Object.values(dailyBilling).sort((a, b) => new Date(b.dateStr) - new Date(a.dateStr));
+
+  if (rows.length === 0) {
+    return (
+      <div style={{color:'var(--text-muted)', fontSize:13, padding:12, background:'var(--bg-1)', borderRadius:8, border:'1px dashed var(--line)'}}>
+        No billing data available yet.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{background:'var(--bg-1)', border:'1px solid var(--line)', borderRadius:10, overflow:'hidden'}}>
+      {rows.map((row, i) => (
+        <div key={row.dateStr} style={{
+          display:'grid', 
+          gridTemplateColumns:'1fr auto auto', 
+          gap:16, 
+          padding:'12px 16px', 
+          borderBottom: i < rows.length - 1 ? '1px solid var(--line)' : 'none', 
+          alignItems:'center', 
+          fontSize:13
+        }}>
+          <div>
+            <div style={{fontWeight:600, color:'var(--text)'}}>{row.dateStr}</div>
+            <div style={{fontSize:11, color:'var(--text-muted)', marginTop:2}}>
+              {row.count} orders · {row.items} items
+            </div>
+          </div>
+          <div style={{color:'var(--text-dim)', fontSize:12, fontFamily:'JetBrains Mono, monospace', textAlign:'right'}}>
+            Avg: {settings.currency}{(row.revenue / row.count).toFixed(2)}
+          </div>
+          <div style={{fontFamily:'JetBrains Mono, monospace', fontWeight:700, color:'var(--green)', textAlign:'right', fontSize:14}}>
+            {settings.currency}{row.revenue.toFixed(2)}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
