@@ -65,7 +65,7 @@ function QROrderBanner({ order, onAccept, onDismiss, currency }) {
   );
 }
 
-// Play a clean notification sound
+// Play a clean, loud notification sound (impossible to miss in a kitchen/busy admin panel)
 function playNotificationSound() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -79,16 +79,18 @@ function playNotificationSound() {
     
     const now = ctx.currentTime;
     
-    // Play a high-quality dual-tone chime (elegant ding-dong bell)
-    const playTone = (freq, startTime, duration, vol) => {
+    // Play a sharp tone
+    const playTone = (freq, startTime, duration, vol, type = 'sine') => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
-      osc.type = 'sine';
+      osc.type = type;
       osc.frequency.setValueAtTime(freq, startTime);
       
-      gain.gain.setValueAtTime(vol, startTime);
-      // Beautiful exponential decay
+      // Fast attack
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(vol, startTime + 0.02);
+      // Decay
       gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
       
       osc.connect(gain);
@@ -98,9 +100,18 @@ function playNotificationSound() {
       osc.stop(startTime + duration);
     };
 
-    // Synthesize a beautiful double chime: E6 then G#6 (sweet bell/chime)
-    playTone(1318.51, now, 0.6, 0.15); // E6
-    playTone(1661.22, now + 0.12, 0.8, 0.12); // G#6
+    // Urgent 3-beep loud pattern (high pitch, mix of triangle for punch and sine for depth)
+    // Beep 1
+    playTone(1000, now, 0.25, 0.6, 'triangle');
+    playTone(2000, now, 0.25, 0.3, 'sine');
+    
+    // Beep 2
+    playTone(1000, now + 0.3, 0.25, 0.6, 'triangle');
+    playTone(2000, now + 0.3, 0.25, 0.3, 'sine');
+    
+    // Beep 3
+    playTone(1200, now + 0.6, 0.4, 0.7, 'triangle');
+    playTone(2400, now + 0.6, 0.4, 0.3, 'sine');
   } catch (e) {
     console.warn("Failed to play notification sound:", e);
   }
