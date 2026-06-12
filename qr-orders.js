@@ -65,9 +65,56 @@ function QROrderBanner({ order, onAccept, onDismiss, currency }) {
   );
 }
 
+// Play a clean notification sound
+function playNotificationSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    // Resume context if suspended (common browser security behavior)
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    
+    const now = ctx.currentTime;
+    
+    // Play a high-quality dual-tone chime (elegant ding-dong bell)
+    const playTone = (freq, startTime, duration, vol) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      
+      gain.gain.setValueAtTime(vol, startTime);
+      // Beautiful exponential decay
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+
+    // Synthesize a beautiful double chime: E6 then G#6 (sweet bell/chime)
+    playTone(1318.51, now, 0.6, 0.15); // E6
+    playTone(1661.22, now + 0.12, 0.8, 0.12); // G#6
+  } catch (e) {
+    console.warn("Failed to play notification sound:", e);
+  }
+}
+
 // ── QR Order Watcher Hook ─────────────────────────────────────────────────
 function useQROrders({ tables, setTables, showToast, currency, setModal }) {
   const [pendingQROrder, setPendingQROrder] = React.useState(null);
+
+  React.useEffect(() => {
+    if (pendingQROrder) {
+      playNotificationSound();
+    }
+  }, [pendingQROrder]);
 
   React.useEffect(() => {
     const seen = () => {
