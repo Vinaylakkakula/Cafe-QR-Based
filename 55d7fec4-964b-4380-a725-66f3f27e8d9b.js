@@ -1,7 +1,7 @@
 // Main app — dashboard layout with reservations, customers, notifications
 
 const STORAGE_KEY = "ember_pos_v2";
-const MENU_VERSION = 4;
+const MENU_VERSION = 5;
 
 function loadState() {
   try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return null; return JSON.parse(raw); } catch { return null; }
@@ -26,7 +26,9 @@ function App({ authUser, onLogout }) {
   const [menuItems, setMenuItems] = React.useState(
     (saved?.menuVersion === MENU_VERSION && saved?.menuItems) ? saved.menuItems : MENU_ITEMS
   );
-  const [categories, setCategories] = React.useState(saved?.categories || MENU_CATEGORIES);
+  const [categories, setCategories] = React.useState(
+    (saved?.menuVersion === MENU_VERSION && saved?.categories) ? saved.categories : MENU_CATEGORIES
+  );
   const [orders, setOrders] = React.useState(saved?.orders || []);
   const [events, setEvents] = React.useState(saved?.events || []);
   const [reservations, setReservations] = React.useState(saved?.reservations || seedReservations());

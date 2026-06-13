@@ -38,6 +38,7 @@ const MENU_CATEGORIES = [
   { id: "sides", name: "Sides", icon: "🥔" },
   { id: "desserts", name: "Desserts", icon: "🍰" },
   { id: "drinks", name: "Drinks", icon: "🍷" },
+  { id: "bakery", name: "Bakery", icon: "🥐" },
 ];
 
 // Using Unsplash images (hotlinkable, no auth needed)
@@ -94,6 +95,32 @@ const MENU_ITEMS = [
   { id: "m62", cat: "drinks", name: "Sparkling Water", desc: "San Pellegrino 750ml", price: 6.00, veg: true, available: true, stock: 50, img: window.__resources["img_photo_1523362628745_0c100150b504"] },
   { id: "m63", cat: "drinks", name: "Cold Brew", desc: "House blend, 18-hour steep", price: 5.50, veg: true, available: true, stock: 30, img: window.__resources["img_photo_1461023058943_07fcbe16d735"] },
   { id: "m64", cat: "drinks", name: "Fresh Squeezed OJ", desc: "Valencia orange, daily press", price: 7.00, veg: true, available: true, stock: 25, img: window.__resources["img_photo_1613478223719_2ab802602423"] },
+
+  // Bakery Category Items
+  { id: "b1", cat: "bakery", name: "Egg Puff", desc: "Crispy layered pastry stuffed with boiled egg and spiced masala", price: 20.00, veg: false, available: true, stock: 15, img: window.__resources["img_photo_1608686207856_001b95cf60ca"] },
+  { id: "b2", cat: "bakery", name: "Chicken Puff", desc: "Flaky golden pastry filled with seasoned minced chicken", price: 25.00, veg: false, available: true, stock: 15, img: window.__resources["img_photo_1626379616459_b2ce1d9decbc"] },
+  { id: "b3", cat: "bakery", name: "Vegetable Maggi Noodles", desc: "Classic Maggi noodles cooked with fresh mixed vegetables and spices", price: 35.00, veg: true, available: true, stock: 30, img: window.__resources["img_photo_1612966608967_312ba59910d0"] },
+  { id: "b4", cat: "bakery", name: "Grilled Cheese Sandwich", desc: "Toasted bread loaded with melted cheddar and mozzarella cheese", price: 50.00, veg: true, available: true, stock: 20, img: window.__resources["img_photo_1509722747041_616f39b57569"] },
+  { id: "b5", cat: "bakery", name: "Chicken Club Sandwich", desc: "Triple-layer sandwich with grilled chicken, egg, lettuce, and mayo", price: 70.00, veg: false, available: true, stock: 12, img: window.__resources["img_photo_1509722747041_616f39b57569"] },
+  { id: "b6", cat: "bakery", name: "Classic Veg Burger", desc: "Crispy vegetable patty in a sesame bun with lettuce, tomato, and mayo", price: 60.00, veg: true, available: true, stock: 15, img: window.__resources["img_photo_1568901346375_23c9450c58cd"] },
+  { id: "b7", cat: "bakery", name: "Paneer Tikka Pizza", desc: "Personal pizza topped with marinated paneer cubes, onions, capsicum, and cheese", price: 120.00, veg: true, available: true, stock: 10, img: window.__resources["img_photo_1513104890138-7c749659a591"] },
+  { id: "b8", cat: "bakery", name: "Butter Croissant", desc: "Freshly baked, rich, and flaky French style croissant", price: 40.00, veg: true, available: true, stock: 18, img: window.__resources["img_photo_1555507036-ab1f4038808a"] },
+  { id: "b9", cat: "bakery", name: "Premium Butter Biscuits", desc: "Sweet and salty melt-in-your-mouth bakery style butter biscuits", price: 30.00, veg: true, available: true, stock: 50, img: window.__resources["img_photo_1558030006_450675393462"] },
+  { id: "b10", cat: "bakery", name: "Kit-Kat Chocolate Bar", desc: "Crisp wafer fingers covered in smooth milk chocolate", price: 25.00, veg: true, available: true, stock: 40, img: window.__resources["img_photo_1548907040-4d42b52125e0"] },
+  { id: "b11", cat: "bakery", name: "Cadbury Dairy Milk", desc: "Classic rich, smooth, and creamy milk chocolate bar", price: 40.00, veg: true, available: true, stock: 45, img: window.__resources["img_photo_1548907040-4d42b52125e0"] },
+  { id: "b12", cat: "bakery", name: "Red Velvet Cupcake", desc: "Soft red velvet cupcake topped with smooth cream cheese frosting", price: 35.00, veg: true, available: true, stock: 15, img: window.__resources["img_photo_1587314168485_3236d6710814"] },
+  { id: "b13", cat: "bakery", name: "Signature Pastry with Flowers", desc: "Deliciously moist layer cake decorated with beautiful edible flowers", price: 85.00, veg: true, available: true, stock: 8, img: window.__resources["img_photo_1578985545062-69928b1d9587"] },
+  { id: "b14", cat: "bakery", name: "Artisan Ice Cream with Flowers", desc: "Creamy gourmet ice cream served with colorful edible flowers", price: 95.00, veg: true, available: true, stock: 10, img: window.__resources["img_photo_1470124182917_cc6e71b22ecc"] },
+  { id: "b15", cat: "bakery", name: "Mango Thick Shake", desc: "Rich and creamy thick shake blended with fresh Alphonso mango pulp", price: 80.00, veg: true, available: true, stock: 20, img: window.__resources["img_photo_1461023058943_07fcbe16d735"] },
+  { id: "b16", cat: "bakery", name: "Chocolate Milkshake", desc: "Classic chilled milkshake made with dark chocolate syrup and vanilla ice cream", price: 70.00, veg: true, available: true, stock: 20, img: window.__resources["img_photo_1461023058943_07fcbe16d735"] },
+  { id: "b17", cat: "bakery", name: "Red Bull Energy Drink", desc: "Chilled 250ml can of premium energy drink", price: 110.00, veg: true, available: true, stock: 25, img: window.__resources["img_photo_1523362628745_0c100150b504"] },
+  { id: "b18", cat: "bakery", name: "Monster Energy Drink", desc: "Chilled 350ml can of original Monster energy drink", price: 110.00, veg: true, available: true, stock: 25, img: window.__resources["img_photo_1523362628745_0c100150b504"] },
+  { id: "b19", cat: "bakery", name: "Thums Up", desc: "Chilled 300ml can of strong spicy cola", price: 30.00, veg: true, available: true, stock: 50, img: window.__resources["img_photo_1523362628745_0c100150b504"] },
+  { id: "b20", cat: "bakery", name: "Coca-Cola", desc: "Chilled 300ml can of original classic Coca-Cola", price: 30.00, veg: true, available: true, stock: 50, img: window.__resources["img_photo_1523362628745_0c100150b504"] },
+  { id: "b21", cat: "bakery", name: "Filter Coffee", desc: "Authentic hot South Indian filter coffee brewed with fresh milk", price: 20.00, veg: true, available: true, stock: 30, img: window.__resources["img_photo_1461023058943_07fcbe16d735"] },
+  { id: "b22", cat: "bakery", name: "Masala Tea", desc: "Traditional Indian milk tea brewed with aromatic spices and ginger", price: 15.00, veg: true, available: true, stock: 35, img: window.__resources["img_photo_1461023058943_07fcbe16d735"] },
+  { id: "b23", cat: "bakery", name: "Hot Boost Milk", desc: "Healthy warm milk mixed with chocolatey Boost energy drink powder", price: 30.00, veg: true, available: true, stock: 25, img: window.__resources["img_photo_1461023058943_07fcbe16d735"] },
+  { id: "b24", cat: "bakery", name: "Hot Horlicks Milk", desc: "Nourishing hot milk mixed with classic malt Horlicks powder", price: 30.00, veg: true, available: true, stock: 25, img: window.__resources["img_photo_1461023058943_07fcbe16d735"] },
 ];
 
 const WAITERS = ["Jamie Chen", "Priya Patel", "Marcus Webb", "Sofia Ruiz", "Theo Park", "Lena Osei"];
