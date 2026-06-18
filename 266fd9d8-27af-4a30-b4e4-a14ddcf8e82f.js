@@ -170,6 +170,18 @@ function buildInitialTables(count) {
       activeSplit: 0,
     });
   }
+  
+  // Add virtual takeaway table
+  tables.push({
+    id: "takeaway",
+    num: "Takeaway",
+    capacity: 0,
+    status: "available",
+    waiter: "",
+    splits: [createSplit("Takeaway")],
+    activeSplit: 0,
+  });
+
   if (tables[2]) { tables[2].status = "reserved"; }
   if (tables[6]) { tables[6].status = "reserved"; }
   return tables;

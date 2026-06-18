@@ -1,24 +1,30 @@
 // Floor plan view
 
 const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, onShowQR }) => {
-  const statusLabel = { available: "Available", occupied: "Occupied", reserved: "Reserved" }[table.status];
+  const statusLabel = { available: "Available", occupied: "Active", reserved: "Reserved" }[table.status];
+  const isTakeaway = table.id === "takeaway";
   return (
     <div
       className={`table-card ${table.status} ${selected ? "selected" : ""}`}
+      style={isTakeaway ? { borderStyle: "dashed", borderColor: "var(--amber-bright)" } : {}}
       onClick={() => onClick(table)}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, table); }}
     >
       <div className="table-top">
         <div>
-          <div className="table-num">T{table.num}</div>
-          <div className="table-cap">
-            <Icon name="users" size={10} /> Seats {table.capacity}
-          </div>
+          <div className="table-num">{isTakeaway ? "🛍️ Takeaway" : `T${table.num}`}</div>
+          {!isTakeaway && (
+            <div className="table-cap">
+              <Icon name="users" size={10} /> Seats {table.capacity}
+            </div>
+          )}
         </div>
-        <div className="table-status">{statusLabel}</div>
+        <div className="table-status">{isTakeaway ? (table.status === "occupied" ? "Active" : "New Order") : statusLabel}</div>
       </div>
       <div>
-        {table.waiter ? (
+        {isTakeaway ? (
+          <div className="table-meta" style={{color: 'var(--amber-bright)', fontWeight: 600}}>Self-Pickup</div>
+        ) : table.waiter ? (
           <div className="table-waiter">{table.waiter}</div>
         ) : (
           <div className="table-meta">Unassigned</div>
@@ -30,16 +36,18 @@ const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, 
       {table.splits.length > 1 && (
         <div className="table-splits">{table.splits.length} SPLITS</div>
       )}
-      <button
-        title="Show QR code"
-        onClick={(e) => { e.stopPropagation(); onShowQR && onShowQR(table); }}
-        style={{
-          position: "absolute", top: 8, right: 8,
-          background: "rgba(242,164,58,.15)", border: "1px solid rgba(242,164,58,.3)",
-          borderRadius: 6, padding: "2px 5px", cursor: "pointer",
-          fontSize: 13, lineHeight: 1, color: "var(--amber-bright)",
-        }}
-      >📲</button>
+      {!isTakeaway && (
+        <button
+          title="Show QR code"
+          onClick={(e) => { e.stopPropagation(); onShowQR && onShowQR(table); }}
+          style={{
+            position: "absolute", top: 8, right: 8,
+            background: "rgba(242,164,58,.15)", border: "1px solid rgba(242,164,58,.3)",
+            borderRadius: 6, padding: "2px 5px", cursor: "pointer",
+            fontSize: 13, lineHeight: 1, color: "var(--amber-bright)",
+          }}
+        >📲</button>
+      )}
     </div>
   );
 };

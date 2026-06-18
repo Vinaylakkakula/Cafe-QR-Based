@@ -199,9 +199,18 @@ function App({ authUser, onLogout }) {
 
   const handleResetTables = (count) => {
     setTables(prev => {
-      const current = [...prev];
-      if (count > current.length) { const caps = [2,2,4,4,4,6,6,8]; for (let i = current.length + 1; i <= count; i++) current.push({ id: `t${i}`, num: i, capacity: caps[(i-1)%caps.length], status: "available", waiter: "", splits: [createSplit()], activeSplit: 0 }); }
-      else if (count < current.length) return current.slice(0, count);
+      const current = prev.filter(t => t.id !== "takeaway");
+      if (count > current.length) {
+        const caps = [2,2,4,4,4,6,6,8];
+        for (let i = current.length + 1; i <= count; i++) {
+          current.push({ id: `t${i}`, num: i, capacity: caps[(i-1)%caps.length], status: "available", waiter: "", splits: [createSplit()], activeSplit: 0 });
+        }
+      } else if (count < current.length) {
+        const sliced = current.slice(0, count);
+        sliced.push(prev.find(t => t.id === "takeaway") || { id: "takeaway", num: "Takeaway", capacity: 0, status: "available", waiter: "", splits: [createSplit("Takeaway")], activeSplit: 0 });
+        return sliced;
+      }
+      current.push(prev.find(t => t.id === "takeaway") || { id: "takeaway", num: "Takeaway", capacity: 0, status: "available", waiter: "", splits: [createSplit("Takeaway")], activeSplit: 0 });
       return current;
     });
   };
