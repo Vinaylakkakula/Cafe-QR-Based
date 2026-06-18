@@ -10,7 +10,7 @@
 @media (max-width: 768px) {
 
   /* ── Root: full-height column, bottom nav at foot ─────────── */
-  #root {
+  #root:has(.main-col) {
     display: flex !important;
     flex-direction: column !important;
     height: 100dvh !important;

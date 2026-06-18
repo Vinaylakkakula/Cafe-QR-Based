@@ -339,16 +339,17 @@ const LoginScreen = ({ onLogin }) => {
           <div style={{fontSize:11, color:"#9ca3af", marginBottom:12, textAlign:"center", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600}}>
             Quick Demo Accounts
           </div>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
+          <div style={{display:"flex", flexWrap:"wrap", gap:6, justifyContent:"center"}}>
             {AUTH_USERS.map(u => (
               <button key={u.username}
                 onClick={()=>{setUsername(u.username); setPassword(u.password); setError("");}}
                 className="demo-btn"
                 style={{
-                  padding:"10px 12px",
+                  padding:"8px 10px",
                   background:"rgba(255, 255, 255, 0.015)",
                   border:`1px solid ${u.color}20`,
-                  borderRadius:10, cursor:"pointer", textAlign:"left",
+                  borderRadius:8, cursor:"pointer", textAlign:"center",
+                  flex: "1 1 calc(33.33% - 6px)", minWidth: 90,
                   transition:"all 0.2s ease", WebkitTapHighlightColor:"transparent"
                 }}
                 onMouseEnter={e=>{
@@ -360,8 +361,8 @@ const LoginScreen = ({ onLogin }) => {
                   e.currentTarget.style.background="rgba(255, 255, 255, 0.015)";
                 }}
               >
-                <div style={{fontSize:12, color:u.color, fontWeight:700}}>{u.role}</div>
-                <div style={{fontSize:11, color:"#6b7280", marginTop:2, fontFamily:"'JetBrains Mono', monospace"}}>{u.username}</div>
+                <div style={{fontSize:11, color:u.color, fontWeight:700}}>{u.role}</div>
+                <div style={{fontSize:9, color:"#6b7280", marginTop:2, fontFamily:"'JetBrains Mono', monospace"}}>{u.username}</div>
               </button>
             ))}
           </div>
