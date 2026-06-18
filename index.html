@@ -592,7 +592,7 @@ input, select, textarea { font-family: inherit; }
 /* Stats strip */
 .stats-strip {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1px;
   background: var(--line);
   border-bottom: 1px solid var(--line);

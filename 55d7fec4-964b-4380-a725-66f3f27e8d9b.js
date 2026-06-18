@@ -335,21 +335,25 @@ function App({ authUser, onLogout }) {
         </div>
 
         <div className="stats-strip no-print">
-          <div className="stat-tile">
-            <div className="stat-tile-label"><Icon name="dollar" size={10}/> Daily Revenue</div>
-            <div className="stat-tile-value accent">{settings.currency}{dailyRevenue.toFixed(2)}</div>
-            <div className="stat-tile-delta">{dailyCount} orders · avg {settings.currency}{dailyAvg.toFixed(2)}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-tile-label"><Icon name="dollar" size={10}/> Monthly Revenue</div>
-            <div className="stat-tile-value violet">{settings.currency}{monthlyRevenue.toFixed(2)}</div>
-            <div className="stat-tile-delta">{monthlyCount} orders · avg {settings.currency}{monthlyAvg.toFixed(2)}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-tile-label"><Icon name="dollar" size={10}/> Overall Revenue</div>
-            <div className="stat-tile-value blue">{settings.currency}{totalRevenue.toFixed(2)}</div>
-            <div className="stat-tile-delta">{totalCount} orders · avg {settings.currency}{totalAvg.toFixed(2)}</div>
-          </div>
+          {(!window._authUtils?.ROLE_PERMS?.[authUser?.role] || window._authUtils.ROLE_PERMS[authUser.role].summary !== false) && (
+            <>
+              <div className="stat-tile">
+                <div className="stat-tile-label"><Icon name="dollar" size={10}/> Daily Revenue</div>
+                <div className="stat-tile-value accent">{settings.currency}{dailyRevenue.toFixed(2)}</div>
+                <div className="stat-tile-delta">{dailyCount} orders · avg {settings.currency}{dailyAvg.toFixed(2)}</div>
+              </div>
+              <div className="stat-tile">
+                <div className="stat-tile-label"><Icon name="dollar" size={10}/> Monthly Revenue</div>
+                <div className="stat-tile-value violet">{settings.currency}{monthlyRevenue.toFixed(2)}</div>
+                <div className="stat-tile-delta">{monthlyCount} orders · avg {settings.currency}{monthlyAvg.toFixed(2)}</div>
+              </div>
+              <div className="stat-tile">
+                <div className="stat-tile-label"><Icon name="dollar" size={10}/> Overall Revenue</div>
+                <div className="stat-tile-value blue">{settings.currency}{totalRevenue.toFixed(2)}</div>
+                <div className="stat-tile-delta">{totalCount} orders · avg {settings.currency}{totalAvg.toFixed(2)}</div>
+              </div>
+            </>
+          )}
           <div className="stat-tile">
             <div className="stat-tile-label"><Icon name="users" size={10}/> Occupancy</div>
             <div className="stat-tile-value green">{occupancyPct}%</div>
