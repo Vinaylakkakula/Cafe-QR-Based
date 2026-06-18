@@ -324,7 +324,7 @@ function App({ authUser, onLogout }) {
               <div className="clock-date">{formatDate(now)}</div>
             </div>
             {authUser && window._authUtils?.UserBadge ? (
-              <window._authUtils.UserBadge user={authUser} onLogout={onLogout || (() => {})}/>
+              <window._authUtils.UserBadge user={authUser} onLogout={onLogout || (() => {})} onChangePassword={() => setModal({ type: "change-password" })}/>
             ) : (
               <div className="cashier-chip">
                 <div className="avatar">{settings.cashierName.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}</div>
@@ -432,6 +432,9 @@ function App({ authUser, onLogout }) {
       {modal?.type === "new-customer" && <NewCustomerModal onClose={() => setModal(null)} onSave={(c) => { setCustomers(prev => [...prev, c]); setModal(null); showToast(`${c.name} added`); }}/>}
       {modal?.type === "qr" && window.QRCodeModal && React.createElement(window.QRCodeModal, { tableNum: modal.tableNum, baseUrl: window.location.href.replace(/[^/]*$/, ""), onClose: () => setModal(null) })}
       {qrPending && window.QROrderBanner && React.createElement(window.QROrderBanner, { order: qrPending, currency: settings.currency, onAccept: qrAccept, onDismiss: qrDismiss })}
+      {modal?.type === "change-password" && window._authUtils?.ChangePasswordModal && (
+        <window._authUtils.ChangePasswordModal authUser={authUser} onClose={() => setModal(null)} showToast={showToast}/>
+      )}
       {toast && <Toast message={toast} onDone={() => setToast(null)}/>}
     </>
   );

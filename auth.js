@@ -20,6 +20,35 @@ const ROLE_PERMS = {
   Kitchen: { floor:false,reservations:false, customers:false, history:false,summary:false,admin:false, settings:false, kitchen:true  },
 };
 
+const PASSWORDS_STORAGE_KEY = "vinay_pos_passwords";
+function getStoredUsers() {
+  try {
+    const raw = localStorage.getItem(PASSWORDS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return AUTH_USERS.map(u => {
+        const match = parsed.find(p => p.username === u.username);
+        return match ? { ...u, password: match.password } : u;
+      });
+    }
+  } catch (e) {}
+  return AUTH_USERS;
+}
+
+function updateStoredPassword(username, newPassword) {
+  try {
+    const currentList = getStoredUsers();
+    const updatedList = currentList.map(u => u.username === username ? { ...u, password: newPassword } : u);
+    const simplified = updatedList.map(u => ({ username: u.username, password: u.password }));
+    localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(simplified));
+    const currentAuth = loadAuth();
+    if (currentAuth && currentAuth.username === username) {
+      currentAuth.password = newPassword;
+      saveAuth(currentAuth);
+    }
+  } catch (e) {}
+}
+
 function loadAuth() {
   try { const r = sessionStorage.getItem(AUTH_KEY); return r ? JSON.parse(r) : null; } catch { return null; }
 }
@@ -38,14 +67,83 @@ const LoginScreen = ({ onLogin }) => {
     const root = document.getElementById("root");
     const prev = root.style.cssText;
     root.style.cssText = "display:block!important; height:100vh; overflow:auto;";
-    return () => { root.style.cssText = prev; };
+
+    // Inject animated styles
+    let styleEl = document.getElementById("login-animations");
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = "login-animations";
+      styleEl.innerHTML = `
+        @keyframes loginCardEntrance {
+          0% { opacity: 0; transform: translateY(40px) scale(0.95); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes glowPulse {
+          0%, 100% { opacity: 0.25; transform: scale(1) translate(0, 0); }
+          50% { opacity: 0.45; transform: scale(1.15) translate(15px, -15px); }
+        }
+        @keyframes floatIn {
+          0% { opacity: 0; transform: translateY(20px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-6px); }
+          40%, 80% { transform: translateX(6px); }
+        }
+        .animate-card {
+          animation: loginCardEntrance 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-glow-1 {
+          animation: glowPulse 10s infinite alternate ease-in-out;
+        }
+        .animate-glow-2 {
+          animation: glowPulse 12s infinite alternate-reverse ease-in-out;
+        }
+        .animate-field-1 {
+          animation: floatIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
+        }
+        .animate-field-2 {
+          animation: floatIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.22s both;
+        }
+        .animate-btn {
+          animation: floatIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.32s both;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .animate-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(249, 168, 37, 0.45) !important;
+          filter: brightness(1.08);
+        }
+        .animate-btn:active:not(:disabled) {
+          transform: translateY(0) scale(0.98);
+        }
+        .animate-demo {
+          animation: floatIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.42s both;
+        }
+        .demo-btn {
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .demo-btn:hover {
+          transform: translateY(-2px) scale(1.025);
+          box-shadow: 0 4px 12px rgba(255,255,255,0.05);
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+
+    return () => {
+      root.style.cssText = prev;
+      if (styleEl) styleEl.remove();
+    };
   }, []);
 
   const handleLogin = () => {
     if (!username || !password) return;
     setError(""); setLoading(true);
     setTimeout(() => {
-      const u = AUTH_USERS.find(u =>
+      const storedUsers = getStoredUsers();
+      const u = storedUsers.find(u =>
         u.username === username.trim().toLowerCase() && u.password === password
       );
       if (u) { saveAuth(u); onLogin(u); }
@@ -68,11 +166,11 @@ const LoginScreen = ({ onLogin }) => {
       position: "relative",
       overflow: "hidden"
     }}>
-      {/* Decorative blurred background shapes */}
-      <div style={{position:"absolute", top:"20%", left:"15%", width:200, height:200, borderRadius:"50%", background:"rgba(249, 168, 37, 0.025)", filter:"blur(80px)", pointerEvents:"none"}}/>
-      <div style={{position:"absolute", bottom:"25%", right:"15%", width:220, height:220, borderRadius:"50%", background:"rgba(103, 162, 217, 0.02)", filter:"blur(90px)", pointerEvents:"none"}}/>
+      {/* Decorative blurred background shapes with pulse animations */}
+      <div className="animate-glow-1" style={{position:"absolute", top:"20%", left:"15%", width:200, height:200, borderRadius:"50%", background:"rgba(249, 168, 37, 0.025)", filter:"blur(80px)", pointerEvents:"none"}}/>
+      <div className="animate-glow-2" style={{position:"absolute", bottom:"25%", right:"15%", width:220, height:220, borderRadius:"50%", background:"rgba(103, 162, 217, 0.02)", filter:"blur(90px)", pointerEvents:"none"}}/>
 
-      <div style={{
+      <div className="animate-card" style={{
         background:"rgba(26, 31, 39, 0.75)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
@@ -81,8 +179,7 @@ const LoginScreen = ({ onLogin }) => {
         padding: isMobile ? "36px 20px 28px" : "48px 40px",
         width:"100%", maxWidth:390,
         boxShadow:"0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)",
-        zIndex: 5,
-        animation: "modalIn .35s cubic-bezier(.16,1,.3,1)"
+        zIndex: 5
       }}>
 
         {/* Brand */}
@@ -99,7 +196,7 @@ const LoginScreen = ({ onLogin }) => {
         </div>
 
         {/* Username */}
-        <div style={{marginBottom:18}}>
+        <div className="animate-field-1" style={{marginBottom:18}}>
           <label style={{fontSize:11, color:"#9ca3af", display:"block", marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em"}}>
             Username
           </label>
@@ -121,7 +218,7 @@ const LoginScreen = ({ onLogin }) => {
         </div>
 
         {/* Password */}
-        <div style={{marginBottom:16}}>
+        <div className="animate-field-2" style={{marginBottom:16}}>
           <label style={{fontSize:11, color:"#9ca3af", display:"block", marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em"}}>
             Password
           </label>
@@ -169,6 +266,7 @@ const LoginScreen = ({ onLogin }) => {
         <button
           onClick={handleLogin}
           disabled={loading || !username || !password}
+          className="animate-btn"
           style={{
             width:"100%", padding:"14px",
             background:(!username||!password||loading)
@@ -188,7 +286,7 @@ const LoginScreen = ({ onLogin }) => {
         </button>
 
         {/* Demo accounts */}
-        <div style={{marginTop:28, borderTop:"1px solid rgba(255, 255, 255, 0.06)", paddingTop:20}}>
+        <div className="animate-demo" style={{marginTop:28, borderTop:"1px solid rgba(255, 255, 255, 0.06)", paddingTop:20}}>
           <div style={{fontSize:11, color:"#9ca3af", marginBottom:12, textAlign:"center", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600}}>
             Quick Demo Accounts
           </div>
@@ -196,6 +294,7 @@ const LoginScreen = ({ onLogin }) => {
             {AUTH_USERS.map(u => (
               <button key={u.username}
                 onClick={()=>{setUsername(u.username); setPassword(u.password); setError("");}}
+                className="demo-btn"
                 style={{
                   padding:"10px 12px",
                   background:"rgba(255, 255, 255, 0.015)",
@@ -224,7 +323,7 @@ const LoginScreen = ({ onLogin }) => {
   );
 };
 
-const UserBadge = ({ user, onLogout }) => (
+const UserBadge = ({ user, onLogout, onChangePassword }) => (
   <div style={{display:"flex", alignItems:"center", gap:8}}>
     <div style={{
       width:28, height:28, borderRadius:"50%", background:user.color,
@@ -235,6 +334,15 @@ const UserBadge = ({ user, onLogout }) => (
       <div style={{fontSize:12, color:"var(--text)", fontWeight:600}}>{user.name}</div>
       <div style={{fontSize:10, color:"var(--text-dim)"}}>{user.role}</div>
     </div>
+    {onChangePassword && (
+      <button onClick={onChangePassword} style={{
+        marginLeft:8, background:"none",
+        border:"1px solid var(--line)", borderRadius:6,
+        padding:"3px 8px", cursor:"pointer",
+        color:"var(--text-dim)", fontSize:11, fontWeight:500,
+        transition:"all .15s"
+      }} title="Change Password">🔑 Pass</button>
+    )}
     <button onClick={onLogout} style={{
       marginLeft:4, background:"none",
       border:"1px solid var(--line)", borderRadius:6,
@@ -244,6 +352,78 @@ const UserBadge = ({ user, onLogout }) => (
     }}>Logout</button>
   </div>
 );
+
+const Portal = ({ children }) => {
+  const el = React.useRef(document.createElement("div"));
+  React.useEffect(() => {
+    document.body.appendChild(el.current);
+    return () => { document.body.removeChild(el.current); };
+  }, []);
+  return ReactDOM.createPortal(children, el.current);
+};
+
+function ChangePasswordModal({ authUser, onClose, showToast }) {
+  const [oldPw, setOldPw] = React.useState("");
+  const [newPw, setNewPw] = React.useState("");
+  const [confirmPw, setConfirmPw] = React.useState("");
+  const [error, setError] = React.useState("");
+
+  const handleSave = () => {
+    const storedUsers = getStoredUsers();
+    const currentRealUser = storedUsers.find(u => u.username === authUser.username);
+    if (!currentRealUser || currentRealUser.password !== oldPw) {
+      setError("Incorrect current password.");
+      return;
+    }
+    if (newPw.length < 4) {
+      setError("New password must be at least 4 characters.");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    updateStoredPassword(authUser.username, newPw);
+    showToast("Password updated successfully!");
+    onClose();
+  };
+
+  return (
+    <Portal>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal animate-card" style={{ width: 340 }} onClick={e => e.stopPropagation()}>
+          <div className="modal-head">
+            <div>
+              <div className="modal-title">Change Password</div>
+              <div className="modal-sub">Update password for {authUser.name}</div>
+            </div>
+            <button className="modal-close" onClick={onClose}><Icon name="x"/></button>
+          </div>
+          <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "var(--text-dim)", display: "block", marginBottom: 6, fontWeight: 600 }}>Current Password</label>
+              <input type="password" value={oldPw} onChange={e=>setOldPw(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "var(--text-dim)", display: "block", marginBottom: 6, fontWeight: 600 }}>New Password</label>
+              <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "var(--text-dim)", display: "block", marginBottom: 6, fontWeight: 600 }}>Confirm New Password</label>
+              <input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
+            </div>
+            {error && <div style={{ color: "var(--red)", fontSize: 12 }}>{error}</div>}
+          </div>
+          <div className="modal-foot">
+            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleSave} style={{ background: "var(--amber)", color: "#000" }}>Save Password</button>
+          </div>
+        </div>
+      </div>
+    </Portal>
+  );
+}
 
 // Store globally so App can use it
 window._authUtils = { loadAuth, saveAuth, clearAuth, AUTH_USERS, ROLE_PERMS, LoginScreen, UserBadge };
