@@ -420,11 +420,17 @@
   background: var(--bg-2, #1a1d22);
   border-top: 1px solid var(--line, #2a2e35);
   height: 64px;
-  padding: 0 4px;
+  padding: 0 8px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   align-items: center;
-  justify-content: space-around;
-  gap: 2px;
+  justify-content: flex-start;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.mobile-bottom-nav::-webkit-scrollbar {
+  display: none;
 }
 .mobile-bottom-nav button {
   display: flex;
@@ -432,8 +438,8 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  flex: 1;
-  height: 56px;
+  flex: 0 0 72px;
+  height: 52px;
   background: none;
   border: none;
   cursor: pointer;
@@ -497,6 +503,7 @@
       { id: 'history',      icon: 'history', label: 'Orders'  },
       { id: 'summary',      icon: 'chart',   label: 'Analytics' },
       { id: 'kitchen',      icon: 'chef',    label: 'Kitchen' },
+      { id: 'staff',        icon: 'users',   label: 'Staff'   },
       { id: 'admin',        icon: 'chef',    label: 'Admin'   },
       { id: 'settings',     icon: 'settings', label: 'Settings' },
     ];
@@ -527,14 +534,18 @@
       btn.dataset.view = item.id;
       btn.innerHTML = (ICONS[item.icon] || '') + `<span>${item.label}</span>`;
       btn.addEventListener('click', () => {
-        const allNavBtns = document.querySelectorAll('.sidebar-nav .sidebar-btn');
         const viewIds = Array.from(allNavBtns).map((_, i) => {
-          const viewMap = ['floor','reservations','customers','history','summary','kitchen','admin','settings'];
+          const viewMap = ['floor','reservations','customers','history','summary','kitchen','staff','admin','settings'];
           return viewMap[i];
         });
         const sidebarIndex = viewIds.indexOf(item.id);
         if (sidebarIndex >= 0 && allNavBtns[sidebarIndex]) allNavBtns[sidebarIndex].click();
         updateActive(item.id);
+        
+        // Scroll button into center view smoothly
+        try {
+          btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        } catch(e) {}
       });
       nav.appendChild(btn);
     });
@@ -553,9 +564,15 @@
       if (activeSidebar) {
         const sidebarBtns = [...document.querySelectorAll('.sidebar-nav .sidebar-btn')];
         const idx = sidebarBtns.indexOf(activeSidebar);
-        const viewMap = ['floor','reservations','customers','history','summary','kitchen','admin','settings'];
+        const viewMap = ['floor','reservations','customers','history','summary','kitchen','staff','admin','settings'];
         const currentView = viewMap[idx];
-        if (currentView) updateActive(currentView);
+        if (currentView) {
+          updateActive(currentView);
+          try {
+            const activeBtn = nav.querySelector(`button[data-view="${currentView}"]`);
+            if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          } catch(e) {}
+        }
       }
     });
     observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
