@@ -479,4 +479,4 @@ function ChangePasswordModal({ authUser, onClose, showToast }) {
 }
 
 // Store globally so App can use it
-window._authUtils = { loadAuth, saveAuth, clearAuth, AUTH_USERS, ROLE_PERMS, LoginScreen, UserBadge };
+window._authUtils = { loadAuth, saveAuth, clearAuth, AUTH_USERS, ROLE_PERMS, LoginScreen, UserBadge, ChangePasswordModal };
