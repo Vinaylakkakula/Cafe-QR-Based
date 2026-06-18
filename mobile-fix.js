@@ -134,14 +134,20 @@
   /* ── Floor grid ───────────────────────────────────────────── */
   .floor-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)) !important;
     gap: 8px !important;
   }
-  .table-card   { padding: 8px !important; aspect-ratio: 1.1 !important; }
+  .table-card   { padding: 8px !important; aspect-ratio: 1.05 !important; }
   .table-num    { font-size: 16px !important; }
   .table-cap, .table-waiter, .table-meta { font-size: 9px !important; }
   .table-total  { font-size: 10px !important; }
-  .table-status { font-size: 8px !important; padding: 2px 5px !important; }
+  .table-status { display: none !important; }
+  .table-card button[title="Show QR code"] {
+    top: 6px !important;
+    right: 6px !important;
+    padding: 1px 4px !important;
+    font-size: 11px !important;
+  }
 
   /* ── Category tabs ────────────────────────────────────────── */
   .cat-tabs {

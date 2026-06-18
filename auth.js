@@ -32,6 +32,7 @@ const LoginScreen = ({ onLogin }) => {
   const [showPw,   setShowPw]   = React.useState(false);
   const [error,    setError]    = React.useState("");
   const [loading,  setLoading]  = React.useState(false);
+  const [focusField, setFocusField] = React.useState("");
 
   React.useEffect(() => {
     const root = document.getElementById("root");
@@ -60,77 +61,96 @@ const LoginScreen = ({ onLogin }) => {
   return (
     <div style={{
       minHeight:"100vh",
-      background:"linear-gradient(160deg,#0d1117 0%,#13171c 50%,#0d1117 100%)",
+      background:"#0a0d12",
+      backgroundImage:"radial-gradient(circle at 50% 10%, rgba(249, 168, 37, 0.08), transparent 45%), radial-gradient(circle at 10% 90%, rgba(66, 165, 245, 0.04), transparent 35%)",
       display:"flex", alignItems:"center", justifyContent:"center",
-      fontFamily:"Inter,sans-serif", padding: isMobile ? "16px" : "24px"
+      fontFamily:"Inter,sans-serif", padding: isMobile ? "16px" : "24px",
+      position: "relative",
+      overflow: "hidden"
     }}>
+      {/* Decorative blurred background shapes */}
+      <div style={{position:"absolute", top:"20%", left:"15%", width:200, height:200, borderRadius:"50%", background:"rgba(249, 168, 37, 0.025)", filter:"blur(80px)", pointerEvents:"none"}}/>
+      <div style={{position:"absolute", bottom:"25%", right:"15%", width:220, height:220, borderRadius:"50%", background:"rgba(103, 162, 217, 0.02)", filter:"blur(90px)", pointerEvents:"none"}}/>
+
       <div style={{
-        background:"#1a1f27",
-        border:"1px solid #2a2f3a",
-        borderRadius: isMobile ? 20 : 18,
-        padding: isMobile ? "32px 20px 28px" : "40px 36px",
-        width:"100%", maxWidth:380,
-        boxShadow:"0 24px 64px rgba(0,0,0,0.55)"
+        background:"rgba(26, 31, 39, 0.75)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        border:"1px solid rgba(255, 255, 255, 0.07)",
+        borderRadius: isMobile ? 24 : 20,
+        padding: isMobile ? "36px 20px 28px" : "48px 40px",
+        width:"100%", maxWidth:390,
+        boxShadow:"0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)",
+        zIndex: 5,
+        animation: "modalIn .35s cubic-bezier(.16,1,.3,1)"
       }}>
 
         {/* Brand */}
-        <div style={{textAlign:"center", marginBottom:28}}>
+        <div style={{textAlign:"center", marginBottom:32}}>
           <div style={{
-            width:60, height:60, borderRadius:16,
+            width:64, height:64, borderRadius:18,
             background:"linear-gradient(135deg,#f9a825,#ff6f00)",
             display:"flex", alignItems:"center", justifyContent:"center",
-            fontSize:30, margin:"0 auto 14px", boxShadow:"0 8px 24px rgba(249,168,37,.3)"
+            fontSize:32, margin:"0 auto 16px",
+            boxShadow:"0 8px 24px rgba(249,168,37,.35), inset 0 1px 0 rgba(255,255,255,0.2)"
           }}>🍽️</div>
-          <div style={{fontSize:22, fontWeight:700, color:"#fff", letterSpacing:"-0.02em"}}>Vinay Cafe</div>
-          <div style={{fontSize:12, color:"#6b7280", marginTop:4}}>Point of Sale — Staff Login</div>
+          <div style={{fontSize:24, fontWeight:800, color:"#fff", letterSpacing:"-0.02em"}}>Vinay Cafe</div>
+          <div style={{fontSize:12, color:"#9ca3af", marginTop:6, fontWeight:500}}>Point of Sale — Staff Access</div>
         </div>
 
         {/* Username */}
-        <div style={{marginBottom:14}}>
-          <label style={{fontSize:11, color:"#9ca3af", display:"block", marginBottom:6, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.05em"}}>
+        <div style={{marginBottom:18}}>
+          <label style={{fontSize:11, color:"#9ca3af", display:"block", marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em"}}>
             Username
           </label>
           <input
             value={username} onChange={e=>setUsername(e.target.value)} onKeyDown={handleKey}
             autoCapitalize="none" autoCorrect="off" spellCheck="false"
-            placeholder="Enter your username"
+            placeholder="Enter username"
+            onFocus={() => setFocusField("username")}
+            onBlur={() => setFocusField("")}
             style={{
-              width:"100%", padding:"13px 14px",
-              background:"#0f1318", border:"1px solid #2e3440",
-              borderRadius:10, color:"#fff", fontSize:16, outline:"none",
-              boxSizing:"border-box", fontFamily:"inherit", transition:"border .2s"
+              width:"100%", padding:"13px 16px",
+              background:"rgba(15, 19, 24, 0.7)",
+              border: focusField === "username" ? "1px solid #f9a825" : "1px solid rgba(255, 255, 255, 0.08)",
+              boxShadow: focusField === "username" ? "0 0 12px rgba(249, 168, 37, 0.2)" : "none",
+              borderRadius:12, color:"#fff", fontSize:15, outline:"none",
+              boxSizing:"border-box", fontFamily:"inherit", transition:"all 0.25s ease"
             }}
-            onFocus={e=>e.target.style.borderColor="#f9a825"}
-            onBlur={e=>e.target.style.borderColor="#2e3440"}
           />
         </div>
 
         {/* Password */}
-        <div style={{marginBottom:12}}>
-          <label style={{fontSize:11, color:"#9ca3af", display:"block", marginBottom:6, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.05em"}}>
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:11, color:"#9ca3af", display:"block", marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.06em"}}>
             Password
           </label>
           <div style={{position:"relative"}}>
             <input
               type={showPw?"text":"password"}
               value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={handleKey}
-              placeholder="Enter your password"
+              placeholder="Enter password"
+              onFocus={() => setFocusField("password")}
+              onBlur={() => setFocusField("")}
               style={{
-                width:"100%", padding:"13px 44px 13px 14px",
-                background:"#0f1318", border:"1px solid #2e3440",
-                borderRadius:10, color:"#fff", fontSize:16, outline:"none",
-                boxSizing:"border-box", fontFamily:"inherit", transition:"border .2s"
+                width:"100%", padding:"13px 46px 13px 16px",
+                background:"rgba(15, 19, 24, 0.7)",
+                border: focusField === "password" ? "1px solid #f9a825" : "1px solid rgba(255, 255, 255, 0.08)",
+                boxShadow: focusField === "password" ? "0 0 12px rgba(249, 168, 37, 0.2)" : "none",
+                borderRadius:12, color:"#fff", fontSize:15, outline:"none",
+                boxSizing:"border-box", fontFamily:"inherit", transition:"all 0.25s ease"
               }}
-              onFocus={e=>e.target.style.borderColor="#f9a825"}
-              onBlur={e=>e.target.style.borderColor="#2e3440"}
             />
             <button
               onClick={()=>setShowPw(p=>!p)}
               style={{
                 position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
                 background:"none", border:"none", cursor:"pointer",
-                color:"#6b7280", fontSize:16, padding:4, lineHeight:1
+                color:"#9ca3af", fontSize:16, padding:4, lineHeight:1,
+                opacity: 0.7, transition: "opacity 0.2s"
               }}
+              onMouseEnter={e=>e.target.style.opacity=1}
+              onMouseLeave={e=>e.target.style.opacity=0.7}
             >{showPw ? "🙈" : "👁"}</button>
           </div>
         </div>
@@ -138,9 +158,10 @@ const LoginScreen = ({ onLogin }) => {
         {/* Error */}
         {error && (
           <div style={{
-            color:"#f87171", fontSize:12, marginBottom:12,
-            padding:"9px 12px", background:"rgba(248,113,113,0.08)",
-            border:"1px solid rgba(248,113,113,0.2)", borderRadius:8
+            color:"#fca5a5", fontSize:12, marginBottom:16,
+            padding:"10px 14px", background:"rgba(239, 68, 68, 0.08)",
+            border:"1px solid rgba(239, 68, 68, 0.18)", borderRadius:10,
+            animation: "shake 0.3s ease-in-out"
           }}>{error}</div>
         )}
 
@@ -151,42 +172,48 @@ const LoginScreen = ({ onLogin }) => {
           style={{
             width:"100%", padding:"14px",
             background:(!username||!password||loading)
-              ? "#1f2430"
+              ? "rgba(255, 255, 255, 0.03)"
               : "linear-gradient(135deg,#f9a825,#ff8f00)",
-            border:"none", borderRadius:10,
-            color:(!username||!password||loading) ? "#4b5563" : "#1a0800",
+            border:"none", borderRadius:12,
+            color:(!username||!password||loading) ? "rgba(255, 255, 255, 0.15)" : "#1a0800",
             fontSize:15, fontWeight:700,
             cursor:(!username||!password||loading) ? "not-allowed" : "pointer",
-            marginTop:4, transition:"all .2s", letterSpacing:"-0.01em",
+            marginTop:8, transition:"all 0.25s ease", letterSpacing:"-0.01em",
             boxShadow:(!username||!password||loading)
               ? "none"
-              : "0 4px 16px rgba(249,168,37,.25)"
+              : "0 6px 20px rgba(249,168,37,0.3)"
           }}
         >
           {loading ? "Signing in…" : "Sign In →"}
         </button>
 
         {/* Demo accounts */}
-        <div style={{marginTop:22, borderTop:"1px solid #1f2430", paddingTop:18}}>
-          <div style={{fontSize:11, color:"#374151", marginBottom:10, textAlign:"center", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600}}>
-            Demo Accounts
+        <div style={{marginTop:28, borderTop:"1px solid rgba(255, 255, 255, 0.06)", paddingTop:20}}>
+          <div style={{fontSize:11, color:"#9ca3af", marginBottom:12, textAlign:"center", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600}}>
+            Quick Demo Accounts
           </div>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:6}}>
+          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
             {AUTH_USERS.map(u => (
               <button key={u.username}
                 onClick={()=>{setUsername(u.username); setPassword(u.password); setError("");}}
                 style={{
-                  padding:"8px 10px",
-                  background:"#0f1318",
-                  border:`1px solid ${u.color}33`,
-                  borderRadius:8, cursor:"pointer", textAlign:"left",
-                  transition:"all .15s", WebkitTapHighlightColor:"transparent"
+                  padding:"10px 12px",
+                  background:"rgba(255, 255, 255, 0.015)",
+                  border:`1px solid ${u.color}20`,
+                  borderRadius:10, cursor:"pointer", textAlign:"left",
+                  transition:"all 0.2s ease", WebkitTapHighlightColor:"transparent"
                 }}
-                onMouseEnter={e=>e.currentTarget.style.borderColor=u.color+"88"}
-                onMouseLeave={e=>e.currentTarget.style.borderColor=u.color+"33"}
+                onMouseEnter={e=>{
+                  e.currentTarget.style.borderColor=u.color+"60";
+                  e.currentTarget.style.background="rgba(255, 255, 255, 0.035)";
+                }}
+                onMouseLeave={e=>{
+                  e.currentTarget.style.borderColor=u.color+"20";
+                  e.currentTarget.style.background="rgba(255, 255, 255, 0.015)";
+                }}
               >
                 <div style={{fontSize:12, color:u.color, fontWeight:700}}>{u.role}</div>
-                <div style={{fontSize:11, color:"#4b5563", marginTop:1}}>{u.username}</div>
+                <div style={{fontSize:11, color:"#6b7280", marginTop:2, fontFamily:"'JetBrains Mono', monospace"}}>{u.username}</div>
               </button>
             ))}
           </div>
