@@ -13,7 +13,7 @@ const KOT_ADDONS = [
   { id:"vs",  label:"No Salt",       icon:"🧂" },
 ];
 
-const KOTModal = ({ table, split, onClose }) => {
+const KOTModal = ({ table, split, onClose, onSendKOT }) => {
   const now = new Date();
   // itemAddons: { [itemIdx]: Set of addon ids }
   const [itemAddons, setItemAddons] = React.useState(() => {
@@ -37,6 +37,18 @@ const KOTModal = ({ table, split, onClose }) => {
     if (kotRef.current) kotRef.current.classList.add("print-target");
     window.print();
     setTimeout(() => { if (kotRef.current) kotRef.current.classList.remove("print-target"); }, 500);
+    
+    if (onSendKOT) {
+      const decrements = {};
+      const updatedItems = split.items.map(item => {
+        const unsent = item.qty - (item.sentQty || 0);
+        if (unsent > 0) {
+          decrements[item.id] = (decrements[item.id] || 0) + unsent;
+        }
+        return { ...item, sentQty: item.qty };
+      });
+      onSendKOT(updatedItems, decrements);
+    }
   };
 
   return (

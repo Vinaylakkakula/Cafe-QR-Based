@@ -13,11 +13,11 @@ const AUTH_USERS = [
 ];
 
 const ROLE_PERMS = {
-  Admin:   { floor:true, reservations:true,  customers:true,  history:true, summary:true, admin:true,  settings:true,  kitchen:true  },
-  Manager: { floor:true, reservations:true,  customers:true,  history:true, summary:true, admin:false, settings:true,  kitchen:true  },
-  Cashier: { floor:true, reservations:false, customers:true,  history:true, summary:false,admin:false, settings:false, kitchen:false },
-  Waiter:  { floor:true, reservations:true,  customers:false, history:false,summary:false,admin:false, settings:false, kitchen:false },
-  Kitchen: { floor:false,reservations:false, customers:false, history:false,summary:false,admin:false, settings:false, kitchen:true  },
+  Admin:   { floor:true, reservations:true,  customers:true,  history:true, summary:true, admin:true,  settings:true,  kitchen:true,  staff:true  },
+  Manager: { floor:true, reservations:true,  customers:true,  history:true, summary:true, admin:false, settings:true,  kitchen:true,  staff:true  },
+  Cashier: { floor:true, reservations:false, customers:true,  history:true, summary:false,admin:false, settings:false, kitchen:false, staff:false },
+  Waiter:  { floor:true, reservations:true,  customers:false, history:false,summary:false,admin:false, settings:false, kitchen:false, staff:false },
+  Kitchen: { floor:false,reservations:false, customers:false, history:false,summary:false,admin:false, settings:false, kitchen:true,  staff:false },
 };
 
 async function loadStoredUsersFromSupabase() {

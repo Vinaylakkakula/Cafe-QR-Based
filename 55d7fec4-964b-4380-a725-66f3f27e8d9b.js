@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { id: "history", icon: "history", label: "Orders" },
   { id: "summary", icon: "chart", label: "Analytics" },
   { id: "kitchen", icon: "chef", label: "Kitchen" },
+  { id: "staff", icon: "users", label: "Staff" },
   { id: "admin", icon: "chef", label: "Admin" },
   { id: "settings", icon: "gear", label: "Settings" },
 ];
@@ -47,6 +48,14 @@ function App({ authUser, onLogout }) {
   const [events, setEvents] = React.useState(saved?.events || []);
   const [reservations, setReservations] = React.useState(saved?.reservations || seedReservations());
   const [customers, setCustomers] = React.useState(saved?.customers || seedCustomers());
+  const [staff, setStaff] = React.useState(() => {
+    if (saved?.staff) return saved.staff;
+    return [
+      { id: "st1", name: "Vinay Lakkakula", role: "Manager", salary: 45000, joined: "2024-01-15", payments: { "2026-05": "paid", "2026-06": "pending" } },
+      { id: "st2", name: "Ramesh Kumar", role: "Chef", salary: 35000, joined: "2024-03-10", payments: { "2026-05": "paid", "2026-06": "paid" } },
+      { id: "st3", name: "Sita Sharma", role: "Waitstaff", salary: 18000, joined: "2025-02-01", payments: { "2026-05": "paid", "2026-06": "unpaid" } }
+    ];
+  });
   const [notifications, setNotifications] = React.useState(saved?.notifications || []);
   const [selectedId, setSelectedId] = React.useState(null);
   const [activeCat, setActiveCat] = React.useState("starters");
@@ -74,6 +83,7 @@ function App({ authUser, onLogout }) {
                     : item.id === 'kitchen'      ? 'kitchen'
                     : item.id === 'admin'        ? 'admin'
                     : item.id === 'settings'     ? 'settings'
+                    : item.id === 'staff'        ? 'staff'
                     : 'floor';
           return perms[key] !== false;
         });
@@ -138,6 +148,7 @@ function App({ authUser, onLogout }) {
           if (dbState.orders) setOrders(dbState.orders);
           if (dbState.reservations) setReservations(dbState.reservations);
           if (dbState.customers) setCustomers(dbState.customers);
+          if (dbState.staff) setStaff(dbState.staff);
           showToast("Loaded real-time state from Supabase");
         }
       }
@@ -146,12 +157,12 @@ function App({ authUser, onLogout }) {
   }, []);
 
   React.useEffect(() => {
-    const state = { settings, tables, menuItems, categories, orders, events, reservations, customers, notifications, tipDismissed, menuVersion: MENU_VERSION };
+    const state = { settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed, menuVersion: MENU_VERSION };
     saveState(state);
     if (window.supabaseClient) {
       window.pushStateToSupabase(state);
     }
-  }, [settings, tables, menuItems, categories, orders, events, reservations, customers, notifications, tipDismissed]);
+  }, [settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed]);
 
   // Generate notifications from state
   React.useEffect(() => {
@@ -159,7 +170,18 @@ function App({ authUser, onLogout }) {
     const newOnes = [];
     menuItems.filter(i => i.available && i.stock <= 5).forEach(i => {
       const key = `low-${i.id}`;
-      if (!existingKeys.has(key)) newOnes.push({ id: uid("n"), key, level: "warn", title: "Low stock", msg: `${i.name} only ${i.stock} left`, ts: Date.now(), read: false });
+      if (!existingKeys.has(key)) {
+        const isCritical = i.stock < 4;
+        newOnes.push({ 
+          id: uid("n"), 
+          key, 
+          level: isCritical ? "error" : "warn", 
+          title: isCritical ? "Critical low stock" : "Low stock", 
+          msg: `${i.name} only ${i.stock} left`, 
+          ts: Date.now(), 
+          read: false 
+        });
+      }
     });
     reservations.filter(r => r.status === "confirmed" && r.ts - Date.now() < 30*60*1000 && r.ts - Date.now() > 0).forEach(r => {
       const key = `res-${r.id}`;
@@ -210,7 +232,26 @@ function App({ authUser, onLogout }) {
     const table = selectedTable;
     const split = table.splits[table.activeSplit];
     const totals = computeSplitTotals(split, settings);
-    const order = { id: uid("ord"), ts: Date.now(), tableNum: table.num, waiter: table.waiter, splitLabel: split.label, split: JSON.parse(JSON.stringify(split)), totals, payment: paymentRecord };
+    
+    // Fallback stock decrement for checkout: if KOT wasn't sent, decrement any unsent quantities
+    const updatedItems = split.items.map(item => {
+      const unsent = item.qty - (item.sentQty || 0);
+      if (unsent > 0) {
+        setMenuItems(prev => prev.map(m => {
+          if (m.id === item.id) {
+            const newStock = Math.max(0, m.stock - unsent);
+            if (newStock < 4 && m.stock >= 4) {
+              setTimeout(() => showToast(`⚠️ Critically Low Stock: ${m.name} has only ${newStock} left!`), 200);
+            }
+            return { ...m, stock: newStock };
+          }
+          return m;
+        }));
+      }
+      return { ...item, sentQty: item.qty };
+    });
+    
+    const order = { id: uid("ord"), ts: Date.now(), tableNum: table.num, waiter: table.waiter, splitLabel: split.label, split: { ...split, items: updatedItems }, totals, payment: paymentRecord };
     setOrders(prev => [...prev, order]);
     pushEvent(`Payment · T${table.num} · ${paymentRecord.method.toUpperCase()}`, settings.currency + paymentRecord.amount.toFixed(2));
     setNotifications(prev => [{ id: uid("n"), key: "pay-"+order.id, level: "ok", title: "Payment received", msg: `T${table.num} · ${settings.currency}${paymentRecord.amount.toFixed(2)}`, ts: Date.now(), read: false }, ...prev].slice(0, 20));
@@ -283,6 +324,7 @@ function App({ authUser, onLogout }) {
     history: { main: "Orders", sub: "All transactions from this session" },
     summary: { main: "Analytics", sub: `${formatDate(now)} · ${getShift(now)} shift` },
     kitchen: { main: "Kitchen Display System", sub: "Real-time kitchen order preparation and queue" },
+    staff: { main: "Staff & Salaries", sub: "Manage worker details, experience and salary tracking" },
     admin: { main: "Admin Panel", sub: "Manage menu items, categories & inventory" },
     settings: { main: "Settings", sub: "Configure restaurant & POS behaviour" },
   }[view];
@@ -312,6 +354,7 @@ function App({ authUser, onLogout }) {
                         : item.id === 'history'      ? 'history'
                         : item.id === 'summary'      ? 'summary'
                         : item.id === 'kitchen'      ? 'kitchen'
+                        : item.id === 'staff'        ? 'staff'
                         : item.id === 'admin'        ? 'admin'
                         : item.id === 'settings'     ? 'settings'
                         : 'floor';
@@ -451,6 +494,7 @@ function App({ authUser, onLogout }) {
               {view === "reservations" && <ReservationsView reservations={reservations} tables={tables} onCheckIn={seatReservation} onCancel={(r) => { setReservations(prev => prev.map(x => x.id === r.id ? {...x, status:"cancelled"} : x)); showToast("Reservation cancelled"); }} onAdd={() => setModal({ type: "new-res" })}/>}
               {view === "customers" && <CustomersView customers={customers} onAdd={() => setModal({ type: "new-customer" })}/>}
               {view === "kitchen" && <KitchenDisplay tables={tables} onUpdateTable={updateTable} settings={settings} showToast={showToast}/>}
+              {view === "staff" && window.StaffView && <window.StaffView staff={staff} setStaff={setStaff} showToast={showToast}/>}
               {view === "admin" && <AdminPanel menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} orders={orders} settings={settings} showToast={showToast} tables={tables}/>}
               {view === "history" && <HistoryView orders={orders} settings={settings} onReprint={(o) => setModal({ type: "receipt", order: o })}/>}
               {view === "summary" && <SummaryView orders={orders} settings={settings}/>}
@@ -461,7 +505,35 @@ function App({ authUser, onLogout }) {
       </div>
 
       {ctx && <TableContextMenu ctx={ctx} onClose={() => setCtx(null)} onSetStatus={setStatus} onAssignWaiter={(t) => setModal({ type: "waiter", table: t })}/>}
-      {modal?.type === "kot" && selectedTable && <KOTModal table={selectedTable} split={selectedTable.splits[selectedTable.activeSplit]} onClose={() => setModal(null)}/>}
+      {modal?.type === "kot" && selectedTable && (
+        <KOTModal 
+          table={selectedTable} 
+          split={selectedTable.splits[selectedTable.activeSplit]} 
+          onClose={() => setModal(null)}
+          onSendKOT={(updatedItems, decrements) => {
+            // Update table items to record the sent quantity
+            const table = selectedTable;
+            const splits = [...table.splits];
+            splits[table.activeSplit] = { ...splits[table.activeSplit], items: updatedItems, courseStage: "cooking" };
+            updateTable({ ...table, splits });
+            
+            // Decrement menu stocks
+            if (decrements && Object.keys(decrements).length > 0) {
+              setMenuItems(prev => prev.map(m => {
+                if (decrements[m.id]) {
+                  const dec = decrements[m.id];
+                  const newStock = Math.max(0, m.stock - dec);
+                  if (newStock < 4 && m.stock >= 4) {
+                    setTimeout(() => showToast(`⚠️ Critically Low Stock: ${m.name} has only ${newStock} left!`), 200);
+                  }
+                  return { ...m, stock: newStock };
+                }
+                return m;
+              }));
+            }
+          }}
+        />
+      )}
       {modal?.type === "checkout" && selectedTable && <CheckoutModal table={selectedTable} split={selectedTable.splits[selectedTable.activeSplit]} totals={computeSplitTotals(selectedTable.splits[selectedTable.activeSplit], settings)} settings={settings} onClose={() => setModal(null)} onConfirm={(rec) => { setModal(null); confirmPayment(rec); }}/>}
       {modal?.type === "receipt" && <ReceiptModal order={modal.order} settings={settings} onClose={() => setModal(null)}/>}
       {modal?.type === "waiter" && <WaiterModal table={modal.table} onClose={() => setModal(null)} onAssign={(name) => assignWaiter(modal.table, name)}/>}
