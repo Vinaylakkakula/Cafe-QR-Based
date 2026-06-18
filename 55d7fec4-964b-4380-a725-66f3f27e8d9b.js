@@ -196,9 +196,23 @@ function App({ authUser, onLogout }) {
     pushEvent(`Seated · ${r.name} at T${target.num}`);
   };
 
-  const revenue = orders.reduce((s, o) => s + o.payment.amount, 0);
-  const orderCount = orders.length;
-  const avg = orderCount > 0 ? revenue / orderCount : 0;
+  const nowStartOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const nowStartOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const dailyOrders = orders.filter(o => o.ts >= nowStartOfDay);
+  const monthlyOrders = orders.filter(o => o.ts >= nowStartOfMonth);
+
+  const dailyRevenue = dailyOrders.reduce((s, o) => s + o.payment.amount, 0);
+  const dailyCount = dailyOrders.length;
+  const dailyAvg = dailyCount > 0 ? dailyRevenue / dailyCount : 0;
+
+  const monthlyRevenue = monthlyOrders.reduce((s, o) => s + o.payment.amount, 0);
+  const monthlyCount = monthlyOrders.length;
+  const monthlyAvg = monthlyCount > 0 ? monthlyRevenue / monthlyCount : 0;
+
+  const totalRevenue = orders.reduce((s, o) => s + o.payment.amount, 0);
+  const totalCount = orders.length;
+  const totalAvg = totalCount > 0 ? totalRevenue / totalCount : 0;
   const occupiedCount = tables.filter(t => t.status === "occupied").length;
   const totalSeats = tables.reduce((s, t) => s + t.capacity, 0);
   const seatedEst = tables.filter(t => t.status === "occupied").reduce((s, t) => s + t.capacity, 0);
@@ -301,9 +315,19 @@ function App({ authUser, onLogout }) {
 
         <div className="stats-strip no-print">
           <div className="stat-tile">
-            <div className="stat-tile-label"><Icon name="dollar" size={10}/> Revenue Today</div>
-            <div className="stat-tile-value accent">{settings.currency}{revenue.toFixed(2)}</div>
-            <div className="stat-tile-delta">{orderCount} orders · avg {settings.currency}{avg.toFixed(2)}</div>
+            <div className="stat-tile-label"><Icon name="dollar" size={10}/> Daily Revenue</div>
+            <div className="stat-tile-value accent">{settings.currency}{dailyRevenue.toFixed(2)}</div>
+            <div className="stat-tile-delta">{dailyCount} orders · avg {settings.currency}{dailyAvg.toFixed(2)}</div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-tile-label"><Icon name="dollar" size={10}/> Monthly Revenue</div>
+            <div className="stat-tile-value violet">{settings.currency}{monthlyRevenue.toFixed(2)}</div>
+            <div className="stat-tile-delta">{monthlyCount} orders · avg {settings.currency}{monthlyAvg.toFixed(2)}</div>
+          </div>
+          <div className="stat-tile">
+            <div className="stat-tile-label"><Icon name="dollar" size={10}/> Overall Revenue</div>
+            <div className="stat-tile-value blue">{settings.currency}{totalRevenue.toFixed(2)}</div>
+            <div className="stat-tile-delta">{totalCount} orders · avg {settings.currency}{totalAvg.toFixed(2)}</div>
           </div>
           <div className="stat-tile">
             <div className="stat-tile-label"><Icon name="users" size={10}/> Occupancy</div>
