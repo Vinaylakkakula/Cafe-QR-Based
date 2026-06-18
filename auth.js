@@ -20,33 +20,79 @@ const ROLE_PERMS = {
   Kitchen: { floor:false,reservations:false, customers:false, history:false,summary:false,admin:false, settings:false, kitchen:true  },
 };
 
-const PASSWORDS_STORAGE_KEY = "vinay_pos_passwords";
-function getStoredUsers() {
+async function loadStoredUsersFromSupabase() {
+  if (!window.supabaseClient) {
+    try {
+      const raw = localStorage.getItem("vinay_pos_passwords");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return AUTH_USERS.map(u => {
+          const match = parsed.find(p => p.username === u.username);
+          return match ? { ...u, password: match.password } : u;
+        });
+      }
+    } catch (e) {}
+    return AUTH_USERS;
+  }
   try {
-    const raw = localStorage.getItem(PASSWORDS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
+    const { data, error } = await window.supabaseClient
+      .from("pos_settings")
+      .select("data")
+      .eq("id", "passwords")
+      .single();
+    if (data && data.data) {
       return AUTH_USERS.map(u => {
-        const match = parsed.find(p => p.username === u.username);
+        const match = data.data.find(p => p.username === u.username);
         return match ? { ...u, password: match.password } : u;
       });
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Failed to load staff passwords from Supabase:", e);
+  }
   return AUTH_USERS;
 }
 
-function updateStoredPassword(username, newPassword) {
+async function updateStoredPasswordInSupabase(username, newPassword) {
+  const currentAuth = loadAuth();
+  if (currentAuth && currentAuth.username === username) {
+    currentAuth.password = newPassword;
+    saveAuth(currentAuth);
+  }
+
+  if (!window.supabaseClient) {
+    try {
+      const storedUsers = await loadStoredUsersFromSupabase();
+      const updatedList = storedUsers.map(u => u.username === username ? { ...u, password: newPassword } : u);
+      const simplified = updatedList.map(u => ({ username: u.username, password: u.password }));
+      localStorage.setItem("vinay_pos_passwords", JSON.stringify(simplified));
+    } catch (e) {}
+    return;
+  }
+  
   try {
-    const currentList = getStoredUsers();
-    const updatedList = currentList.map(u => u.username === username ? { ...u, password: newPassword } : u);
-    const simplified = updatedList.map(u => ({ username: u.username, password: u.password }));
-    localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(simplified));
-    const currentAuth = loadAuth();
-    if (currentAuth && currentAuth.username === username) {
-      currentAuth.password = newPassword;
-      saveAuth(currentAuth);
+    let currentData = [];
+    const { data } = await window.supabaseClient
+      .from("pos_settings")
+      .select("data")
+      .eq("id", "passwords")
+      .single();
+    if (data && data.data) {
+      currentData = data.data;
     }
-  } catch (e) {}
+    
+    const idx = currentData.findIndex(p => p.username === username);
+    if (idx >= 0) {
+      currentData[idx].password = newPassword;
+    } else {
+      currentData.push({ username, password: newPassword });
+    }
+    
+    await window.supabaseClient
+      .from("pos_settings")
+      .upsert([{ id: "passwords", data: currentData }]);
+  } catch (e) {
+    console.error("Failed to update password in Supabase:", e);
+  }
 }
 
 function loadAuth() {
@@ -138,17 +184,20 @@ const LoginScreen = ({ onLogin }) => {
     };
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!username || !password) return;
     setError(""); setLoading(true);
-    setTimeout(() => {
-      const storedUsers = getStoredUsers();
+    try {
+      const storedUsers = await loadStoredUsersFromSupabase();
       const u = storedUsers.find(u =>
         u.username === username.trim().toLowerCase() && u.password === password
       );
       if (u) { saveAuth(u); onLogin(u); }
       else { setError("Invalid username or password."); setLoading(false); }
-    }, 380);
+    } catch (e) {
+      setError("Database connection error.");
+      setLoading(false);
+    }
   };
 
   const handleKey = (e) => { if (e.key === "Enter") handleLogin(); };
@@ -368,25 +417,29 @@ function ChangePasswordModal({ authUser, onClose, showToast }) {
   const [confirmPw, setConfirmPw] = React.useState("");
   const [error, setError] = React.useState("");
 
-  const handleSave = () => {
-    const storedUsers = getStoredUsers();
-    const currentRealUser = storedUsers.find(u => u.username === authUser.username);
-    if (!currentRealUser || currentRealUser.password !== oldPw) {
-      setError("Incorrect current password.");
-      return;
-    }
-    if (newPw.length < 4) {
-      setError("New password must be at least 4 characters.");
-      return;
-    }
-    if (newPw !== confirmPw) {
-      setError("Passwords do not match.");
-      return;
-    }
+  const handleSave = async () => {
+    try {
+      const storedUsers = await loadStoredUsersFromSupabase();
+      const currentRealUser = storedUsers.find(u => u.username === authUser.username);
+      if (!currentRealUser || currentRealUser.password !== oldPw) {
+        setError("Incorrect current password.");
+        return;
+      }
+      if (newPw.length < 4) {
+        setError("New password must be at least 4 characters.");
+        return;
+      }
+      if (newPw !== confirmPw) {
+        setError("Passwords do not match.");
+        return;
+      }
 
-    updateStoredPassword(authUser.username, newPw);
-    showToast("Password updated successfully!");
-    onClose();
+      await updateStoredPasswordInSupabase(authUser.username, newPw);
+      showToast("Password updated successfully!");
+      onClose();
+    } catch (e) {
+      setError("Database connection error.");
+    }
   };
 
   return (
