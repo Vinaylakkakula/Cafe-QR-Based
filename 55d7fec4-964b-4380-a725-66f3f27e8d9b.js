@@ -22,7 +22,21 @@ const NAV_ITEMS = [
 function App({ authUser, onLogout }) {
   const saved = loadState();
   const [settings, setSettings] = React.useState(saved?.settings || DEFAULT_SETTINGS);
-  const [tables, setTables] = React.useState(saved?.tables || buildInitialTables(DEFAULT_SETTINGS.tableCount));
+  const [tables, setTables] = React.useState(() => {
+    const initial = saved?.tables || buildInitialTables(DEFAULT_SETTINGS.tableCount);
+    if (!initial.some(t => t.id === "takeaway")) {
+      initial.push({
+        id: "takeaway",
+        num: "Takeaway",
+        capacity: 0,
+        status: "available",
+        waiter: "",
+        splits: [createSplit("Takeaway")],
+        activeSplit: 0,
+      });
+    }
+    return initial;
+  });
   const [menuItems, setMenuItems] = React.useState(
     (saved?.menuVersion === MENU_VERSION && saved?.menuItems) ? saved.menuItems : MENU_ITEMS
   );
@@ -105,7 +119,21 @@ function App({ authUser, onLogout }) {
         const dbState = await window.fetchSupabaseState();
         if (dbState) {
           if (dbState.settings) setSettings(dbState.settings);
-          if (dbState.tables) setTables(dbState.tables);
+          if (dbState.tables) {
+            const loaded = [...dbState.tables];
+            if (!loaded.some(t => t.id === "takeaway")) {
+              loaded.push({
+                id: "takeaway",
+                num: "Takeaway",
+                capacity: 0,
+                status: "available",
+                waiter: "",
+                splits: [createSplit("Takeaway")],
+                activeSplit: 0,
+              });
+            }
+            setTables(loaded);
+          }
           if (dbState.menuItems) setMenuItems(dbState.menuItems);
           if (dbState.orders) setOrders(dbState.orders);
           if (dbState.reservations) setReservations(dbState.reservations);
