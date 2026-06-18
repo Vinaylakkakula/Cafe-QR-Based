@@ -9,13 +9,15 @@ const AUTH_USERS = [
   { username: "manager", password: "mgr2024",   role: "Manager", name: "Manager",    color: "#42a5f5" },
   { username: "cashier", password: "cash2024",  role: "Cashier", name: "Cashier",    color: "#66bb6a" },
   { username: "waiter",  password: "wait2024",  role: "Waiter",  name: "Waiter",     color: "#ab47bc" },
+  { username: "kitchen", password: "kit2024",   role: "Kitchen", name: "Kitchen",    color: "#67a2d9" },
 ];
 
 const ROLE_PERMS = {
-  Admin:   { floor:true, reservations:true,  customers:true,  history:true, summary:true, admin:true,  settings:true  },
-  Manager: { floor:true, reservations:true,  customers:true,  history:true, summary:true, admin:false, settings:true  },
-  Cashier: { floor:true, reservations:false, customers:true,  history:true, summary:false,admin:false, settings:false },
-  Waiter:  { floor:true, reservations:true,  customers:false, history:false,summary:false,admin:false, settings:false },
+  Admin:   { floor:true, reservations:true,  customers:true,  history:true, summary:true, admin:true,  settings:true,  kitchen:true  },
+  Manager: { floor:true, reservations:true,  customers:true,  history:true, summary:true, admin:false, settings:true,  kitchen:true  },
+  Cashier: { floor:true, reservations:false, customers:true,  history:true, summary:false,admin:false, settings:false, kitchen:false },
+  Waiter:  { floor:true, reservations:true,  customers:false, history:false,summary:false,admin:false, settings:false, kitchen:false },
+  Kitchen: { floor:false,reservations:false, customers:false, history:false,summary:false,admin:false, settings:false, kitchen:true  },
 };
 
 function loadAuth() {

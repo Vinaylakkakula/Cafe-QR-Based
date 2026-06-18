@@ -47,6 +47,27 @@ function App({ authUser, onLogout }) {
 
   React.useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
   
+  // Auto-route to first permitted view based on role
+  React.useEffect(() => {
+    if (authUser) {
+      const perms = window._authUtils?.ROLE_PERMS?.[authUser.role];
+      if (perms && perms[view] === false) {
+        const allowedItem = NAV_ITEMS.find(item => {
+          const key = item.id === 'reservations' ? 'reservations'
+                    : item.id === 'customers'    ? 'customers'
+                    : item.id === 'history'      ? 'history'
+                    : item.id === 'summary'      ? 'summary'
+                    : item.id === 'kitchen'      ? 'kitchen'
+                    : item.id === 'admin'        ? 'admin'
+                    : item.id === 'settings'     ? 'settings'
+                    : 'floor';
+          return perms[key] !== false;
+        });
+        if (allowedItem) setView(allowedItem.id);
+      }
+    }
+  }, [authUser, view]);
+  
   // Apply brand colors and title dynamically
   React.useEffect(() => {
     const color = settings.themeColor || "amber";
