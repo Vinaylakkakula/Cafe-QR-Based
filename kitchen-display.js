@@ -1,5 +1,38 @@
 // Kitchen Display System (KDS) View Component
 
+// Play a distinct double bell chime for the kitchen
+function playKDSSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    const now = ctx.currentTime;
+    
+    const playTone = (freq, startTime, duration, vol, type = 'sine') => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(vol, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+
+    // Double bell chime: punchy E5 followed by clear E6
+    playTone(659.25, now, 0.3, 0.3, 'triangle');
+    playTone(1318.51, now + 0.15, 0.5, 0.2, 'sine');
+  } catch (e) {
+    console.warn("Failed to play KDS notification sound:", e);
+  }
+}
+
 const KitchenDisplay = ({ tables, onUpdateTable, settings, showToast }) => {
   // Find all active tickets (occupied tables with items in active split)
   const tickets = tables
@@ -16,6 +49,46 @@ const KitchenDisplay = ({ tables, onUpdateTable, settings, showToast }) => {
         stage: split.courseStage || "new",
       };
     });
+
+  const prevTicketsRef = React.useRef([]);
+
+  React.useEffect(() => {
+    // Map current table quantities
+    const currentTicketMap = {};
+    tickets.forEach(t => {
+      currentTicketMap[t.tableId] = t.items.reduce((s, i) => s + i.qty, 0);
+    });
+
+    const prevTicketMap = {};
+    prevTicketsRef.current.forEach(t => {
+      prevTicketMap[t.tableId] = t.items.reduce((s, i) => s + i.qty, 0);
+    });
+
+    let hasNewOrder = false;
+    let newTableNum = null;
+
+    for (const tableId in currentTicketMap) {
+      const currentQty = currentTicketMap[tableId];
+      const prevQty = prevTicketMap[tableId] || 0;
+      if (currentQty > prevQty) {
+        hasNewOrder = true;
+        const currentTicket = tickets.find(t => t.tableId === tableId);
+        if (currentTicket) {
+          newTableNum = currentTicket.tableNum;
+        }
+        break;
+      }
+    }
+
+    if (hasNewOrder && prevTicketsRef.current.length > 0) {
+      playKDSSound();
+      if (showToast) {
+        showToast(`🔔 New order received for Table T${newTableNum}!`);
+      }
+    }
+
+    prevTicketsRef.current = tickets;
+  }, [tickets]);
 
   const updateStage = (ticket, newStage) => {
     const table = tables.find(tbl => tbl.id === ticket.tableId);
