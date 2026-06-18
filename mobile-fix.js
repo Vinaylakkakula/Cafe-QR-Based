@@ -534,12 +534,23 @@
       btn.dataset.view = item.id;
       btn.innerHTML = (ICONS[item.icon] || '') + `<span>${item.label}</span>`;
       btn.addEventListener('click', () => {
-        const viewIds = Array.from(allNavBtns).map((_, i) => {
-          const viewMap = ['floor','reservations','customers','history','summary','kitchen','staff','admin','settings'];
-          return viewMap[i];
+        const labelMap = {
+          floor: "Floor",
+          reservations: "Reservations",
+          customers: "Customers",
+          history: "Orders",
+          summary: "Analytics",
+          kitchen: "Kitchen",
+          staff: "Staff",
+          admin: "Admin",
+          settings: "Settings"
+        };
+        const targetLabel = labelMap[item.id];
+        const sidebarBtn = Array.from(document.querySelectorAll('.sidebar-nav .sidebar-btn')).find(sBtn => {
+          const labelEl = sBtn.querySelector('.sidebar-label');
+          return (labelEl && labelEl.textContent.trim() === targetLabel) || sBtn.title === targetLabel;
         });
-        const sidebarIndex = viewIds.indexOf(item.id);
-        if (sidebarIndex >= 0 && allNavBtns[sidebarIndex]) allNavBtns[sidebarIndex].click();
+        if (sidebarBtn) sidebarBtn.click();
         updateActive(item.id);
         
         // Scroll button into center view smoothly
@@ -562,10 +573,21 @@
     const observer = new MutationObserver(() => {
       const activeSidebar = document.querySelector('.sidebar-btn.active');
       if (activeSidebar) {
-        const sidebarBtns = [...document.querySelectorAll('.sidebar-nav .sidebar-btn')];
-        const idx = sidebarBtns.indexOf(activeSidebar);
-        const viewMap = ['floor','reservations','customers','history','summary','kitchen','staff','admin','settings'];
-        const currentView = viewMap[idx];
+        const labelEl = activeSidebar.querySelector('.sidebar-label');
+        const activeLabel = labelEl ? labelEl.textContent.trim() : activeSidebar.title;
+        
+        const reverseLabelMap = {
+          "Floor": "floor",
+          "Reservations": "reservations",
+          "Customers": "customers",
+          "Orders": "history",
+          "Analytics": "summary",
+          "Kitchen": "kitchen",
+          "Staff": "staff",
+          "Admin": "admin",
+          "Settings": "settings"
+        };
+        const currentView = reverseLabelMap[activeLabel];
         if (currentView) {
           updateActive(currentView);
           try {
