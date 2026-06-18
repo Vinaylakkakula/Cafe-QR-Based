@@ -399,9 +399,9 @@
     font-size: 12px !important;
   }
 
-  /* ── Bottom nav: always visible ───────────────────────────── */
-  .mobile-bottom-nav { display: flex !important; }
-  .mobile-table-back-btn { display: flex !important; }
+  /* ── Bottom nav: only show when logged in ─────────────────── */
+  body:has(.main-col) .mobile-bottom-nav { display: flex !important; }
+  body:has(.main-col) .mobile-table-back-btn { display: flex !important; }
 
   /* ── Thin scrollbars ──────────────────────────────────────── */
   ::-webkit-scrollbar { width: 2px !important; height: 2px !important; }
