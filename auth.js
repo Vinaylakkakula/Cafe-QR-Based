@@ -299,6 +299,7 @@ const LoginScreen = ({ onLogin }) => {
             <input
               type={showPw?"text":"password"}
               value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={handleKey}
+              autoCapitalize="none" autoCorrect="off" spellCheck="false"
               placeholder="Enter password"
               onFocus={() => setFocusField("password")}
               onBlur={() => setFocusField("")}
@@ -481,15 +482,15 @@ function ChangePasswordModal({ authUser, onClose, showToast }) {
           <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={{ fontSize: 11, color: "var(--text-dim)", display: "block", marginBottom: 6, fontWeight: 600 }}>Current Password</label>
-              <input type="password" value={oldPw} onChange={e=>setOldPw(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
+              <input type="password" value={oldPw} onChange={e=>setOldPw(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck="false" style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
             </div>
             <div>
               <label style={{ fontSize: 11, color: "var(--text-dim)", display: "block", marginBottom: 6, fontWeight: 600 }}>New Password</label>
-              <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
+              <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck="false" style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
             </div>
             <div>
               <label style={{ fontSize: 11, color: "var(--text-dim)", display: "block", marginBottom: 6, fontWeight: 600 }}>Confirm New Password</label>
-              <input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
+              <input type="password" value={confirmPw} onChange={e=>setConfirmPw(e.target.value)} autoCapitalize="none" autoCorrect="off" spellCheck="false" style={{ width: "100%", padding: "10px 12px", background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, color: "#fff", outline: "none" }} />
             </div>
             {error && <div style={{ color: "var(--red)", fontSize: 12 }}>{error}</div>}
           </div>

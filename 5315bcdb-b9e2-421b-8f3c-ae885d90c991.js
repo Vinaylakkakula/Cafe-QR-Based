@@ -1,12 +1,47 @@
 // Floor plan view
 
 const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, onShowQR }) => {
-  const statusLabel = { available: "Available", occupied: "Active", reserved: "Reserved" }[table.status];
   const isTakeaway = table.id === "takeaway";
+  
+  const currentSplit = table.splits?.[table.activeSplit];
+  const isReady = currentSplit?.courseStage === "ready";
+  const isPreparing = currentSplit?.courseStage === "preparing" || currentSplit?.courseStage === "cooking";
+  
+  let statusText = { available: "Available", occupied: "Active", reserved: "Reserved" }[table.status];
+  if (table.status === "occupied") {
+    if (isReady) statusText = "🍽️ Ready";
+    else if (isPreparing) statusText = "🔥 Cooking";
+  }
+
+  const cardStyle = {
+    ...(isTakeaway ? { borderStyle: "dashed", borderColor: "var(--amber-bright)" } : {}),
+    ...(isReady ? {
+      borderColor: "var(--green)",
+      borderWidth: "2px",
+      boxShadow: "0 0 15px rgba(107, 191, 123, 0.4)",
+      animation: "pulseGlow 2s infinite alternate"
+    } : {})
+  };
+
+  React.useEffect(() => {
+    let style = document.getElementById("kds-ready-animation");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "kds-ready-animation";
+      style.innerHTML = `
+        @keyframes pulseGlow {
+          0% { box-shadow: 0 0 8px rgba(107, 191, 123, 0.2); }
+          100% { box-shadow: 0 0 18px rgba(107, 191, 123, 0.6); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+
   return (
     <div
-      className={`table-card ${table.status} ${selected ? "selected" : ""}`}
-      style={isTakeaway ? { borderStyle: "dashed", borderColor: "var(--amber-bright)" } : {}}
+      className={`table-card ${table.status} ${selected ? "selected" : ""} ${isReady ? "ready" : ""}`}
+      style={cardStyle}
       onClick={() => onClick(table)}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, table); }}
     >
@@ -19,7 +54,12 @@ const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, 
             </div>
           )}
         </div>
-        <div className="table-status">{isTakeaway ? (table.status === "occupied" ? "Active" : "New Order") : statusLabel}</div>
+        <div 
+          className="table-status"
+          style={isReady ? { background: "rgba(107, 191, 123, 0.18)", color: "var(--green)" } : (isPreparing ? { background: "rgba(242, 164, 58, 0.15)", color: "var(--amber-bright)" } : {})}
+        >
+          {statusText}
+        </div>
       </div>
       <div>
         {isTakeaway ? (

@@ -372,8 +372,12 @@ const ReceiptModal = ({ order, settings, onClose }) => {
   );
 };
 
-const WaiterModal = ({ table, onClose, onAssign }) => {
+const WaiterModal = ({ table, staff, onClose, onAssign }) => {
   const [value, setValue] = React.useState(table.waiter || "");
+  const waitersList = staff 
+    ? staff.filter(s => s.role === "Waitstaff" || s.role === "Waiter").map(s => s.name)
+    : (window.WAITERS || []);
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" style={{width: 360}} onClick={(e)=>e.stopPropagation()}>
@@ -394,7 +398,7 @@ const WaiterModal = ({ table, onClose, onAssign }) => {
             style={{width:'100%', padding:'10px 12px', fontSize:14}}
           />
           <div style={{display:'flex', flexWrap:'wrap', gap:6, marginTop:12}}>
-            {WAITERS.map(w => (
+            {waitersList.map(w => (
               <button key={w} className="filter-chip" onClick={() => setValue(w)}>{w}</button>
             ))}
           </div>
