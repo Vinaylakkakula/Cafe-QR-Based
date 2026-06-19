@@ -21,35 +21,63 @@ const ROLE_PERMS = {
 };
 
 async function loadStoredUsersFromSupabase() {
-  if (!window.supabaseClient) {
-    try {
-      const raw = localStorage.getItem("vinay_pos_passwords");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return AUTH_USERS.map(u => {
-          const match = parsed.find(p => p.username === u.username);
-          return match ? { ...u, password: match.password } : u;
-        });
-      }
-    } catch (e) {}
-    return AUTH_USERS;
-  }
+  let staff = [];
   try {
-    const { data, error } = await window.supabaseClient
-      .from("pos_settings")
-      .select("data")
-      .eq("id", "passwords")
-      .single();
-    if (data && data.data) {
-      return AUTH_USERS.map(u => {
-        const match = data.data.find(p => p.username === u.username);
-        return match ? { ...u, password: match.password } : u;
+    if (window.supabaseClient) {
+      const staffRes = await window.supabaseClient.from("pos_settings").select("data").eq("id", "staff").single();
+      if (staffRes.data && staffRes.data.data) {
+        staff = staffRes.data.data;
+      }
+    } else {
+      const stored = localStorage.getItem("ember_pos_v2");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.staff) staff = parsed.staff;
+      }
+    }
+  } catch (e) {}
+
+  let customPasswords = [];
+  try {
+    if (window.supabaseClient) {
+      const { data } = await window.supabaseClient.from("pos_settings").select("data").eq("id", "passwords").single();
+      if (data && data.data) {
+        customPasswords = data.data;
+      }
+    } else {
+      const raw = localStorage.getItem("vinay_pos_passwords");
+      if (raw) customPasswords = JSON.parse(raw);
+    }
+  } catch (e) {}
+
+  const users = [...AUTH_USERS];
+
+  staff.forEach(s => {
+    if (!s.name) return;
+    const username = s.name.split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    const exists = users.find(u => u.username === username);
+    if (!exists && username) {
+      let role = "Waiter";
+      let color = "#ab47bc";
+      if (s.role === "Manager") { role = "Manager"; color = "#42a5f5"; }
+      else if (s.role === "Chef" || s.role === "Kitchen Helper") { role = "Kitchen"; color = "#67a2d9"; }
+      else if (s.role === "Cashier") { role = "Cashier"; color = "#66bb6a"; }
+      else if (s.role === "Waitstaff") { role = "Waiter"; color = "#ab47bc"; }
+
+      users.push({
+        username,
+        password: `${username}123`,
+        role,
+        name: s.name,
+        color
       });
     }
-  } catch (e) {
-    console.error("Failed to load staff passwords from Supabase:", e);
-  }
-  return AUTH_USERS;
+  });
+
+  return users.map(u => {
+    const match = customPasswords.find(p => p.username === u.username);
+    return match ? { ...u, password: match.password } : u;
+  });
 }
 
 async function updateStoredPasswordInSupabase(username, newPassword) {
@@ -59,37 +87,33 @@ async function updateStoredPasswordInSupabase(username, newPassword) {
     saveAuth(currentAuth);
   }
 
+  let customPasswords = [];
+  try {
+    if (window.supabaseClient) {
+      const { data } = await window.supabaseClient.from("pos_settings").select("data").eq("id", "passwords").single();
+      if (data && data.data) customPasswords = data.data;
+    } else {
+      const raw = localStorage.getItem("vinay_pos_passwords");
+      if (raw) customPasswords = JSON.parse(raw);
+    }
+  } catch (e) {}
+
+  const idx = customPasswords.findIndex(p => p.username === username);
+  if (idx >= 0) {
+    customPasswords[idx].password = newPassword;
+  } else {
+    customPasswords.push({ username, password: newPassword });
+  }
+
   if (!window.supabaseClient) {
-    try {
-      const storedUsers = await loadStoredUsersFromSupabase();
-      const updatedList = storedUsers.map(u => u.username === username ? { ...u, password: newPassword } : u);
-      const simplified = updatedList.map(u => ({ username: u.username, password: u.password }));
-      localStorage.setItem("vinay_pos_passwords", JSON.stringify(simplified));
-    } catch (e) {}
+    localStorage.setItem("vinay_pos_passwords", JSON.stringify(customPasswords));
     return;
   }
-  
+
   try {
-    let currentData = [];
-    const { data } = await window.supabaseClient
-      .from("pos_settings")
-      .select("data")
-      .eq("id", "passwords")
-      .single();
-    if (data && data.data) {
-      currentData = data.data;
-    }
-    
-    const idx = currentData.findIndex(p => p.username === username);
-    if (idx >= 0) {
-      currentData[idx].password = newPassword;
-    } else {
-      currentData.push({ username, password: newPassword });
-    }
-    
     await window.supabaseClient
       .from("pos_settings")
-      .upsert([{ id: "passwords", data: currentData }]);
+      .upsert([{ id: "passwords", data: customPasswords }]);
   } catch (e) {
     console.error("Failed to update password in Supabase:", e);
   }
