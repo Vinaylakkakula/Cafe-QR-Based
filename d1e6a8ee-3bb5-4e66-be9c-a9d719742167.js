@@ -58,9 +58,21 @@ const HistoryView = ({ orders, settings, onReprint }) => {
 };
 
 const SummaryView = ({ orders, settings }) => {
+  const now = new Date();
+  const nowStartOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const nowStartOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const dailyOrders = orders.filter(o => o.ts >= nowStartOfDay);
+  const monthlyOrders = orders.filter(o => o.ts >= nowStartOfMonth);
+
+  const dailyRevenue = dailyOrders.reduce((s, o) => s + o.payment.amount, 0);
+  const monthlyRevenue = monthlyOrders.reduce((s, o) => s + o.payment.amount, 0);
   const totalRevenue = orders.reduce((s, o) => s + o.payment.amount, 0);
+
   const count = orders.length;
   const avg = count > 0 ? totalRevenue / count : 0;
+
+  const [billingTab, setBillingTab] = React.useState("daily");
 
   const byMethod = {};
   orders.forEach(o => {
@@ -79,30 +91,30 @@ const SummaryView = ({ orders, settings }) => {
     <div>
       <div className="section-head">
         <div>
-          <div className="section-title">Daily Summary</div>
+          <div className="section-title">Income & Sales Analytics</div>
           <div className="section-sub">{formatDate(new Date())} · {getShift(new Date())} shift</div>
         </div>
       </div>
       <div className="summary-grid">
         <div className="stat-card">
+          <div className="stat-label">Today's Revenue</div>
+          <div className="stat-value stat-accent">{settings.currency}{dailyRevenue.toFixed(2)}</div>
+          <div className="stat-sub">{dailyOrders.length} orders today</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Monthly Revenue</div>
+          <div className="stat-value" style={{color: 'var(--violet)'}}>{settings.currency}{monthlyRevenue.toFixed(2)}</div>
+          <div className="stat-sub">{monthlyOrders.length} orders this month</div>
+        </div>
+        <div className="stat-card">
           <div className="stat-label">Total Revenue</div>
           <div className="stat-value stat-accent">{settings.currency}{totalRevenue.toFixed(2)}</div>
-          <div className="stat-sub">Gross sales including tax</div>
+          <div className="stat-sub">Gross sales all-time</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Orders</div>
+          <div className="stat-label">Total Orders</div>
           <div className="stat-value">{count}</div>
-          <div className="stat-sub">Completed this session</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Avg Order Value</div>
-          <div className="stat-value">{settings.currency}{avg.toFixed(2)}</div>
-          <div className="stat-sub">Per transaction</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Items Sold</div>
-          <div className="stat-value">{orders.reduce((s, o) => s + o.split.items.reduce((a, i) => a + i.qty, 0), 0)}</div>
-          <div className="stat-sub">Across all orders</div>
+          <div className="stat-sub">Avg value: {settings.currency}{avg.toFixed(2)}</div>
         </div>
       </div>
       <div className="stat-card">
@@ -134,14 +146,87 @@ const SummaryView = ({ orders, settings }) => {
 
       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(340px, 1fr))', gap:20, marginTop:24}}>
         <div>
-          <div className="section-title" style={{fontSize:15, marginBottom:10}}>📅 Daily wise Billing</div>
-          <DailyWiseBillingTable orders={orders} settings={settings}/>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10}}>
+            <div className="section-title" style={{fontSize:15, margin:0}}>
+              {billingTab === "daily" ? "📅 Daily wise Billing" : "📅 Monthly wise Billing"}
+            </div>
+            <div className="history-filters" style={{margin:0}}>
+              <button className={`filter-chip ${billingTab === "daily" ? "active" : ""}`} onClick={() => setBillingTab("daily")} style={{padding:'4px 10px', fontSize:11}}>
+                Daily
+              </button>
+              <button className={`filter-chip ${billingTab === "monthly" ? "active" : ""}`} onClick={() => setBillingTab("monthly")} style={{padding:'4px 10px', fontSize:11}}>
+                Monthly
+              </button>
+            </div>
+          </div>
+          {billingTab === "daily" ? (
+            <DailyWiseBillingTable orders={orders} settings={settings}/>
+          ) : (
+            <MonthlyWiseBillingTable orders={orders} settings={settings}/>
+          )}
         </div>
         <div>
           <div className="section-title" style={{fontSize:15, marginBottom:10}}>🔥 Top Items</div>
           <TopItemsTable orders={orders} settings={settings}/>
         </div>
       </div>
+    </div>
+  );
+};
+
+const MonthlyWiseBillingTable = ({ orders, settings }) => {
+  const getLocalMonthString = (ts) => {
+    const d = new Date(ts);
+    return d.toLocaleDateString("en-US", { year: 'numeric', month: 'long' });
+  };
+
+  const monthlyBilling = {};
+  orders.forEach(o => {
+    const monthStr = getLocalMonthString(o.ts);
+    if (!monthlyBilling[monthStr]) {
+      monthlyBilling[monthStr] = { monthStr, revenue: 0, count: 0, items: 0 };
+    }
+    monthlyBilling[monthStr].revenue += o.payment.amount;
+    monthlyBilling[monthStr].count += 1;
+    monthlyBilling[monthStr].items += o.split.items.reduce((s, i) => s + i.qty, 0);
+  });
+
+  const rows = Object.values(monthlyBilling).sort((a, b) => new Date(b.monthStr) - new Date(a.monthStr));
+
+  if (rows.length === 0) {
+    return (
+      <div style={{color:'var(--text-muted)', fontSize:13, padding:12, background:'var(--bg-1)', borderRadius:8, border:'1px dashed var(--line)'}}>
+        No monthly billing data available yet.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{background:'var(--bg-1)', border:'1px solid var(--line)', borderRadius:10, overflow:'hidden'}}>
+      {rows.map((row, i) => (
+        <div key={row.monthStr} style={{
+          display:'grid', 
+          gridTemplateColumns:'1fr auto auto', 
+          gap:16, 
+          padding:'12px 16px', 
+          borderBottom: i < rows.length - 1 ? '1px solid var(--line)' : 'none', 
+          alignItems:'center', 
+          fontSize:13
+        }}>
+          <div>
+            <div style={{fontWeight:600, color:'var(--text)'}}>{row.monthStr}</div>
+            <div style={{fontSize:11, color:'var(--text-muted)', marginTop:2}}>
+              {row.count} orders · {row.items} items
+            </div>
+          </div>
+          <div style={{color:'var(--text-dim)', fontSize:12, fontFamily:'JetBrains Mono, monospace', textAlign:'right'}}>
+            Avg: {settings.currency}{(row.revenue / row.count).toFixed(2)}
+          </div>
+          <div style={{fontFamily:'JetBrains Mono, monospace', fontWeight:700, color:'var(--green)', textAlign:'right', fontSize:14}}>
+            {settings.currency}{row.revenue.toFixed(2)}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
@@ -502,4 +587,4 @@ const SalesByHourChart = ({ orders, settings }) => {
   );
 };
 
-Object.assign(window, { HistoryView, SummaryView, SettingsView, SalesByHourChart });
+Object.assign(window, { HistoryView, SummaryView, SettingsView, SalesByHourChart, DailyWiseBillingTable, MonthlyWiseBillingTable });
