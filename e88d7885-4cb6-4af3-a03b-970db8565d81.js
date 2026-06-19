@@ -1,7 +1,7 @@
 // Order panel
 
 const OrderPanel = ({
-  selectedTable, onUpdateTable, settings, onOpenCheckout, onOpenKOT, onSaveDraft,
+  selectedTable, onUpdateTable, settings, onOpenCheckout, onOpenKOT, onSaveDraft, staff,
 }) => {
   if (!selectedTable) {
     return (
@@ -53,6 +53,10 @@ const OrderPanel = ({
 
   const hasItems = split.items.length > 0;
 
+  const waitersList = staff
+    ? staff.filter(s => s.role === "Waitstaff" || s.role === "Waiter").map(s => s.name)
+    : (window.WAITERS || []);
+
   return (
     <div className="order-panel">
       <div className="order-head">
@@ -78,7 +82,7 @@ const OrderPanel = ({
             list="waiter-list"
           />
           <datalist id="waiter-list">
-            {WAITERS.map(w => <option key={w} value={w} />)}
+            {waitersList.map(w => <option key={w} value={w} />)}
           </datalist>
         </div>
         <div className="split-tabs">

@@ -132,7 +132,10 @@ function App({ authUser, onLogout }) {
           const currentStage = table.splits?.[table.activeSplit]?.courseStage;
           const prevStage = prevTable.splits?.[prevTable.activeSplit]?.courseStage;
           
-          if (currentStage === "ready" && prevStage !== "ready") {
+          const isTransitionToReady = currentStage === "ready" && 
+            (prevStage === "preparing" || prevStage === "cooking" || prevStage === "new");
+
+          if (isTransitionToReady) {
             const title = `🍽️ Order Ready: Table T${table.num}`;
             const body = `Order for Table T${table.num} is ready!${waiter ? ` (Assigned to: ${waiter})` : ""}`;
             
@@ -641,7 +644,7 @@ function App({ authUser, onLogout }) {
               <MenuGrid items={filteredMenu} categories={categories} activeCat={activeCat} onCat={setActiveCat} onAdd={addItemToOrder} canAdd={!!selectedTable} currency={settings.currency} onToggleAvail={toggleAvail}/>
             </div>
             <div className="dash-right">
-              <OrderPanel selectedTable={selectedTable} onUpdateTable={updateTable} settings={settings} onOpenCheckout={() => setModal({ type: "checkout" })} onOpenKOT={() => setModal({ type: "kot" })} onSaveDraft={saveDraft}/>
+              <OrderPanel selectedTable={selectedTable} onUpdateTable={updateTable} settings={settings} staff={staff} onOpenCheckout={() => setModal({ type: "checkout" })} onOpenKOT={() => setModal({ type: "kot" })} onSaveDraft={saveDraft}/>
               <div className="ticker">
                 <div className="ticker-title"><span style={{width:6, height:6, borderRadius:'50%', background:'var(--green)', boxShadow:'0 0 6px var(--green)', display:'inline-block'}}/>Live Activity</div>
                 {events.length === 0 ? (

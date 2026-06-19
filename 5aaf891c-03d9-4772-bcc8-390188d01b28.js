@@ -33,10 +33,12 @@ const KOTModal = ({ table, split, onClose, onSendKOT }) => {
     });
   };
 
-  const printKot = () => {
-    if (kotRef.current) kotRef.current.classList.add("print-target");
-    window.print();
-    setTimeout(() => { if (kotRef.current) kotRef.current.classList.remove("print-target"); }, 500);
+  const sendKotToKitchen = (shouldPrint) => {
+    if (shouldPrint) {
+      if (kotRef.current) kotRef.current.classList.add("print-target");
+      window.print();
+      setTimeout(() => { if (kotRef.current) kotRef.current.classList.remove("print-target"); }, 500);
+    }
     
     if (onSendKOT) {
       const decrements = {};
@@ -49,6 +51,7 @@ const KOTModal = ({ table, split, onClose, onSendKOT }) => {
       });
       onSendKOT(updatedItems, decrements);
     }
+    onClose();
   };
 
   return (
@@ -118,10 +121,13 @@ const KOTModal = ({ table, split, onClose, onSendKOT }) => {
             <div className="kot-foot">— END OF TICKET —</div>
           </div>
         </div>
-        <div className="modal-foot no-print">
+        <div className="modal-foot no-print" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', width: '100%' }}>
           <button className="btn btn-ghost" onClick={onClose}>Close</button>
-          <button className="btn btn-primary" onClick={printKot}>
-            <Icon name="print" size={14}/> Print & Send to Kitchen
+          <button className="btn btn-secondary" onClick={() => sendKotToKitchen(false)} style={{ background: 'var(--amber-soft)', borderColor: 'var(--amber)', color: 'var(--amber-bright)', padding: '10px 14px' }}>
+            ⚡ Send to KDS (No Print)
+          </button>
+          <button className="btn btn-primary" onClick={() => sendKotToKitchen(true)}>
+            <Icon name="print" size={14}/> Print & Send
           </button>
         </div>
       </div>
