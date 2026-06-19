@@ -449,6 +449,15 @@ function App({ authUser, onLogout }) {
   };
   const setStatus = (table, status) => { updateTable({ ...table, status }); showToast(`T${table.num} marked ${status}`); pushEvent(`T${table.num} → ${status}`); };
   const assignWaiter = (table, name) => { updateTable({ ...table, waiter: name }); showToast(`Waiter assigned: ${name || "—"}`); };
+  const markOrderServed = (table) => {
+    const currentSplit = table.splits?.[table.activeSplit];
+    if (!currentSplit) return;
+    const updatedSplits = [...table.splits];
+    updatedSplits[table.activeSplit] = { ...currentSplit, courseStage: "served" };
+    updateTable({ ...table, splits: updatedSplits });
+    showToast(`Table T${table.num} marked served`);
+    pushEvent(`T${table.num} → Served`);
+  };
 
   const addItemToOrder = (item) => {
     if (!selectedTable) { showToast("Select a table first"); return; }
@@ -716,7 +725,7 @@ function App({ authUser, onLogout }) {
                   {lowStockItems.length > 4 && <span className="alert-chip" style={{color:'var(--text-dim)', background:'var(--bg-2)', borderColor:'var(--line)'}}>+{lowStockItems.length - 4} more</span>}
                 </div>
               )}
-              <FloorPlan tables={tables} selectedId={selectedId} onSelect={selectTable} onContext={(e, t) => setCtx({ x: e.clientX, y: e.clientY, table: t, onShowQR: (t) => setModal({ type: "qr", tableNum: t.num }) })} settings={settings} getTableTotal={getTableTotal} onShowQR={(t) => setModal({ type: "qr", tableNum: t.num })}/>
+              <FloorPlan tables={tables} selectedId={selectedId} onSelect={selectTable} onContext={(e, t) => setCtx({ x: e.clientX, y: e.clientY, table: t, onShowQR: (t) => setModal({ type: "qr", tableNum: t.num }) })} settings={settings} getTableTotal={getTableTotal} onShowQR={(t) => setModal({ type: "qr", tableNum: t.num })} onMarkServed={markOrderServed}/>
               <MenuGrid items={filteredMenu} categories={categories} activeCat={activeCat} onCat={setActiveCat} onAdd={addItemToOrder} canAdd={!!selectedTable} currency={settings.currency} onToggleAvail={toggleAvail}/>
             </div>
             <div className="dash-right">

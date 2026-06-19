@@ -1,6 +1,6 @@
 // Floor plan view
 
-const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, onShowQR }) => {
+const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, onShowQR, onMarkServed }) => {
   const isTakeaway = table.id === "takeaway";
   
   const currentSplit = table.splits?.[table.activeSplit];
@@ -88,11 +88,27 @@ const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, 
           }}
         >📲</button>
       )}
+      {isReady && onMarkServed && (
+        <button
+          title="Mark as served"
+          onClick={(e) => {
+            e.stopPropagation();
+            onMarkServed(table);
+          }}
+          style={{
+            position: "absolute", bottom: 6, right: 6,
+            background: "rgba(107, 191, 123, 0.18)", border: "1px solid var(--green)",
+            borderRadius: 6, padding: "2px 6px", cursor: "pointer",
+            fontSize: 10, fontWeight: 700, color: "var(--green)",
+            zIndex: 10
+          }}
+        >🍽️ Serve</button>
+      )}
     </div>
   );
 };
 
-const FloorPlan = ({ tables, selectedId, onSelect, onContext, settings, getTableTotal, onShowQR }) => {
+const FloorPlan = ({ tables, selectedId, onSelect, onContext, settings, getTableTotal, onShowQR, onMarkServed }) => {
   return (
     <div>
       <div className="section-head">
@@ -117,6 +133,7 @@ const FloorPlan = ({ tables, selectedId, onSelect, onContext, settings, getTable
             totals={getTableTotal(t)}
             currency={settings.currency}
             onShowQR={onShowQR}
+            onMarkServed={onMarkServed}
           />
         ))}
       </div>
