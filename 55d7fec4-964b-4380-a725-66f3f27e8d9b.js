@@ -74,86 +74,143 @@ function App({ authUser, onLogout }) {
       tables.forEach(table => {
         const prevTable = prevTablesRef.current.find(t => t.id === table.id);
         if (prevTable) {
-          const currentStage = table.splits?.[table.activeSplit]?.courseStage;
-          const prevStage = prevTable.splits?.[prevTable.activeSplit]?.courseStage;
+          const waiter = table.waiter || "";
+          const prevWaiter = prevTable.waiter || "";
           
-          if (currentStage === "ready" && prevStage !== "ready") {
-            const waiter = table.waiter || "";
-            const title = `🍽️ Order Ready: Table T${table.num}`;
-            const body = `Order for Table T${table.num} is ready!${waiter ? ` (Assigned to: ${waiter})` : ""}`;
+          // Check if the current user is the waiter for this table
+          const isMe = authUser && waiter && (
+            authUser.name.toLowerCase() === waiter.toLowerCase() || 
+            authUser.username.toLowerCase() === waiter.toLowerCase() ||
+            authUser.name.toLowerCase().includes(waiter.toLowerCase()) ||
+            waiter.toLowerCase().includes(authUser.name.toLowerCase())
+          );
+          const isStaffOrAdmin = authUser && (authUser.role === "Admin" || authUser.role === "Manager");
+
+          // 1. Check if waiter assignment changed to the current logged-in waiter
+          if (waiter && waiter !== prevWaiter && isMe) {
+            const assignTitle = `📋 Table Assigned: T${table.num}`;
+            const assignBody = `You have been assigned to Table T${table.num}`;
             
-            showToast(title);
+            showToast(assignTitle);
             
-            // Send native desktop/mobile push notification
             if ("Notification" in window && Notification.permission === "granted") {
               try {
-                const notif = new Notification(title, {
-                  body,
-                  requireInteraction: true,
-                  tag: `ready-table-${table.id}`
+                const notif = new Notification(assignTitle, {
+                  body: assignBody,
+                  tag: `assigned-table-${table.id}`
                 });
                 notif.onclick = () => {
                   window.focus();
                   notif.close();
                 };
-              } catch (e) {
-                console.warn("KDS Ready native notification failed:", e);
-              }
+              } catch (e) {}
             }
 
-            // Add to system notifications state
-            setNotifications(prev => [{
-              id: uid("n"),
-              key: `ready-${table.id}-${Date.now()}`,
-              level: "ok",
-              title,
-              msg: body,
-              ts: Date.now(),
-              read: false
-            }, ...prev].slice(0, 20));
-
-            // Play E6/C6 double chime
+            // Play a single soft chime
             try {
               const AudioContext = window.AudioContext || window.webkitAudioContext;
               if (AudioContext) {
                 const ctxNode = new AudioContext();
                 if (ctxNode.state === 'suspended') ctxNode.resume();
                 const nowNode = ctxNode.currentTime;
-                
-                const osc1 = ctxNode.createOscillator();
-                const osc2 = ctxNode.createOscillator();
-                const gain1 = ctxNode.createGain();
-                const gain2 = ctxNode.createGain();
-                
-                osc1.type = 'sine';
-                osc1.frequency.setValueAtTime(1318.51, nowNode); // E6
-                gain1.gain.setValueAtTime(0.001, nowNode);
-                gain1.gain.exponentialRampToValueAtTime(0.2, nowNode + 0.02);
-                gain1.gain.exponentialRampToValueAtTime(0.0001, nowNode + 0.4);
-                
-                osc2.type = 'sine';
-                osc2.frequency.setValueAtTime(1046.50, nowNode + 0.15); // C6
-                gain2.gain.setValueAtTime(0.001, nowNode + 0.15);
-                gain2.gain.exponentialRampToValueAtTime(0.2, nowNode + 0.17);
-                gain2.gain.exponentialRampToValueAtTime(0.0001, nowNode + 0.55);
-                
-                osc1.connect(gain1);
-                gain1.connect(ctxNode.destination);
-                osc2.connect(gain2);
-                gain2.connect(ctxNode.destination);
-                
-                osc1.start(nowNode);
-                osc1.stop(nowNode + 0.4);
-                osc2.start(nowNode + 0.15);
-                osc2.stop(nowNode + 0.55);
+                const osc = ctxNode.createOscillator();
+                const gain = ctxNode.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, nowNode); // A5
+                gain.gain.setValueAtTime(0.001, nowNode);
+                gain.gain.exponentialRampToValueAtTime(0.15, nowNode + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, nowNode + 0.3);
+                osc.connect(gain);
+                gain.connect(ctxNode.destination);
+                osc.start(nowNode);
+                osc.stop(nowNode + 0.3);
               }
             } catch (err) {}
+          }
+
+          // 2. Check if KDS stage changed to ready
+          const currentStage = table.splits?.[table.activeSplit]?.courseStage;
+          const prevStage = prevTable.splits?.[prevTable.activeSplit]?.courseStage;
+          
+          if (currentStage === "ready" && prevStage !== "ready") {
+            const title = `🍽️ Order Ready: Table T${table.num}`;
+            const body = `Order for Table T${table.num} is ready!${waiter ? ` (Assigned to: ${waiter})` : ""}`;
+            
+            // Only alert the assigned waiter, or admins/managers (for oversight), or if no waiter is assigned
+            if (isMe || isStaffOrAdmin || !waiter) {
+              showToast(title);
+              
+              // Send native desktop/mobile push notification
+              if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                  const notif = new Notification(title, {
+                    body,
+                    requireInteraction: true,
+                    tag: `ready-table-${table.id}`
+                  });
+                  notif.onclick = () => {
+                    window.focus();
+                    notif.close();
+                  };
+                } catch (e) {
+                  console.warn("KDS Ready native notification failed:", e);
+                }
+              }
+
+              // Add to system notifications state
+              setNotifications(prev => [{
+                id: uid("n"),
+                key: `ready-${table.id}-${Date.now()}`,
+                level: "ok",
+                title,
+                msg: body,
+                ts: Date.now(),
+                read: false
+              }, ...prev].slice(0, 20));
+
+              // Play E6/C6 double chime
+              try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                  const ctxNode = new AudioContext();
+                  if (ctxNode.state === 'suspended') ctxNode.resume();
+                  const nowNode = ctxNode.currentTime;
+                  
+                  const osc1 = ctxNode.createOscillator();
+                  const osc2 = ctxNode.createOscillator();
+                  const gain1 = ctxNode.createGain();
+                  const gain2 = ctxNode.createGain();
+                  
+                  osc1.type = 'sine';
+                  osc1.frequency.setValueAtTime(1318.51, nowNode); // E6
+                  gain1.gain.setValueAtTime(0.001, nowNode);
+                  gain1.gain.exponentialRampToValueAtTime(0.2, nowNode + 0.02);
+                  gain1.gain.exponentialRampToValueAtTime(0.0001, nowNode + 0.4);
+                  
+                  osc2.type = 'sine';
+                  osc2.frequency.setValueAtTime(1046.50, nowNode + 0.15); // C6
+                  gain2.gain.setValueAtTime(0.001, nowNode + 0.15);
+                  gain2.gain.exponentialRampToValueAtTime(0.2, nowNode + 0.17);
+                  gain2.gain.exponentialRampToValueAtTime(0.0001, nowNode + 0.55);
+                  
+                  osc1.connect(gain1);
+                  gain1.connect(ctxNode.destination);
+                  osc2.connect(gain2);
+                  gain2.connect(ctxNode.destination);
+                  
+                  osc1.start(nowNode);
+                  osc1.stop(nowNode + 0.4);
+                  osc2.start(nowNode + 0.15);
+                  osc2.stop(nowNode + 0.55);
+                }
+              } catch (err) {}
+            }
           }
         }
       });
     }
     prevTablesRef.current = JSON.parse(JSON.stringify(tables));
-  }, [tables]);
+  }, [tables, authUser]);
 
   React.useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
