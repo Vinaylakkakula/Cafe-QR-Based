@@ -140,7 +140,7 @@ const KitchenDisplay = ({ tables, onUpdateTable, settings, showToast }) => {
         }}>
           {tickets.map(ticket => {
             const isReady = ticket.stage === "ready";
-            const isPreparing = ticket.stage === "preparing";
+            const isPreparing = ticket.stage === "preparing" || ticket.stage === "cooking";
             const isServed = ticket.stage === "served";
 
             return (
@@ -240,7 +240,7 @@ const KitchenDisplay = ({ tables, onUpdateTable, settings, showToast }) => {
                       🔥 Start Preparing
                     </button>
                   )}
-                  {ticket.stage === "preparing" && (
+                  {(ticket.stage === "preparing" || ticket.stage === "cooking") && (
                     <button
                       onClick={() => updateStage(ticket, "ready")}
                       style={{
