@@ -67,6 +67,93 @@ function App({ authUser, onLogout }) {
   const [search, setSearch] = React.useState("");
   const [showNotif, setShowNotif] = React.useState(false);
   const [tipDismissed, setTipDismissed] = React.useState(saved?.tipDismissed || false);
+  const prevTablesRef = React.useRef(tables);
+
+  React.useEffect(() => {
+    if (prevTablesRef.current && prevTablesRef.current.length > 0) {
+      tables.forEach(table => {
+        const prevTable = prevTablesRef.current.find(t => t.id === table.id);
+        if (prevTable) {
+          const currentStage = table.splits?.[table.activeSplit]?.courseStage;
+          const prevStage = prevTable.splits?.[prevTable.activeSplit]?.courseStage;
+          
+          if (currentStage === "ready" && prevStage !== "ready") {
+            const waiter = table.waiter || "";
+            const title = `🍽️ Order Ready: Table T${table.num}`;
+            const body = `Order for Table T${table.num} is ready!${waiter ? ` (Assigned to: ${waiter})` : ""}`;
+            
+            showToast(title);
+            
+            // Send native desktop/mobile push notification
+            if ("Notification" in window && Notification.permission === "granted") {
+              try {
+                const notif = new Notification(title, {
+                  body,
+                  requireInteraction: true,
+                  tag: `ready-table-${table.id}`
+                });
+                notif.onclick = () => {
+                  window.focus();
+                  notif.close();
+                };
+              } catch (e) {
+                console.warn("KDS Ready native notification failed:", e);
+              }
+            }
+
+            // Add to system notifications state
+            setNotifications(prev => [{
+              id: uid("n"),
+              key: `ready-${table.id}-${Date.now()}`,
+              level: "ok",
+              title,
+              msg: body,
+              ts: Date.now(),
+              read: false
+            }, ...prev].slice(0, 20));
+
+            // Play E6/C6 double chime
+            try {
+              const AudioContext = window.AudioContext || window.webkitAudioContext;
+              if (AudioContext) {
+                const ctxNode = new AudioContext();
+                if (ctxNode.state === 'suspended') ctxNode.resume();
+                const nowNode = ctxNode.currentTime;
+                
+                const osc1 = ctxNode.createOscillator();
+                const osc2 = ctxNode.createOscillator();
+                const gain1 = ctxNode.createGain();
+                const gain2 = ctxNode.createGain();
+                
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(1318.51, nowNode); // E6
+                gain1.gain.setValueAtTime(0.001, nowNode);
+                gain1.gain.exponentialRampToValueAtTime(0.2, nowNode + 0.02);
+                gain1.gain.exponentialRampToValueAtTime(0.0001, nowNode + 0.4);
+                
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1046.50, nowNode + 0.15); // C6
+                gain2.gain.setValueAtTime(0.001, nowNode + 0.15);
+                gain2.gain.exponentialRampToValueAtTime(0.2, nowNode + 0.17);
+                gain2.gain.exponentialRampToValueAtTime(0.0001, nowNode + 0.55);
+                
+                osc1.connect(gain1);
+                gain1.connect(ctxNode.destination);
+                osc2.connect(gain2);
+                gain2.connect(ctxNode.destination);
+                
+                osc1.start(nowNode);
+                osc1.stop(nowNode + 0.4);
+                osc2.start(nowNode + 0.15);
+                osc2.stop(nowNode + 0.55);
+              }
+            } catch (err) {}
+          }
+        }
+      });
+    }
+    prevTablesRef.current = JSON.parse(JSON.stringify(tables));
+  }, [tables]);
 
   React.useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
