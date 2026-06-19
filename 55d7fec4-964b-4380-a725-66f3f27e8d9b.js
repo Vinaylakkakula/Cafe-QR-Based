@@ -346,14 +346,53 @@ function App({ authUser, onLogout }) {
                   activeSplit: 0,
                 });
               }
-              // Merge: Preserve local selected table edits to prevent data wiping while editing
+              
+              const STAGE_WEIGHTS = { new: 0, preparing: 1, cooking: 1, ready: 2, served: 3 };
+              const mergeSplits = (localSplits, remoteSplits) => {
+                if (!localSplits) return remoteSplits;
+                if (!remoteSplits) return localSplits;
+                return remoteSplits.map((rSplit, idx) => {
+                  const lSplit = localSplits[idx];
+                  if (!lSplit) return rSplit;
+                  const rWeight = STAGE_WEIGHTS[rSplit.courseStage] || 0;
+                  const lWeight = STAGE_WEIGHTS[lSplit.courseStage] || 0;
+                  if (lWeight > rWeight) return lSplit;
+                  if (rWeight > lWeight) return rSplit;
+                  if (lSplit.items?.length > 0 && (!rSplit.items || rSplit.items.length === 0)) {
+                    return lSplit;
+                  }
+                  return rSplit;
+                });
+              };
+
+              // Merge local edits with remote loaded tables
               const merged = loaded.map(t => {
+                const localTable = prev.find(p => p.id === t.id);
+                if (!localTable) return t;
+                
+                // If remote table was checked out (marked available), accept the clear
+                if (t.status === "available" && localTable.status !== "available") {
+                  return t;
+                }
+                
+                // If local status is occupied and remote is occupied, merge splits based on progress
+                if (t.status === "occupied" && localTable.status === "occupied") {
+                  const mergedSplits = mergeSplits(localTable.splits, t.splits);
+                  return {
+                    ...t,
+                    status: "occupied",
+                    waiter: localTable.waiter || t.waiter || "",
+                    splits: mergedSplits
+                  };
+                }
+                
+                // Fallback: Preserve local selected table edits
                 if (selectedId && t.id === selectedId) {
-                  const localSelected = prev.find(p => p.id === selectedId);
-                  return localSelected ? localSelected : t;
+                  return localTable;
                 }
                 return t;
               });
+
               if (JSON.stringify(prev) !== JSON.stringify(merged)) {
                 return merged;
               }
