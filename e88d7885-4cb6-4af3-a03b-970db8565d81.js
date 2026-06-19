@@ -98,6 +98,43 @@ const OrderPanel = ({
             <Icon name="split" size={10} style={{marginRight:4}}/> Split bill
           </button>
         </div>
+        {split.courseStage === "ready" && (
+          <div className="order-ready-banner" style={{
+            margin: '10px 16px 4px 16px',
+            padding: '10px 14px',
+            background: 'rgba(107, 191, 123, 0.12)',
+            border: '1px solid var(--green)',
+            borderRadius: 8,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: '0 0 10px rgba(107, 191, 123, 0.15)'
+          }}>
+            <span style={{ color: 'var(--green)', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+              🍽️ Order is Ready!
+            </span>
+            <button 
+              onClick={() => {
+                const splits = [...table.splits];
+                splits[table.activeSplit] = { ...split, courseStage: "served" };
+                onUpdateTable({ ...table, splits });
+              }}
+              style={{
+                background: 'var(--green)',
+                color: '#1a0f00',
+                border: 'none',
+                padding: '5px 10px',
+                fontSize: 11,
+                fontWeight: 700,
+                borderRadius: 6,
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+            >
+              Mark Served
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="order-items">

@@ -137,8 +137,24 @@ const TableContextMenu = ({ ctx, onClose, onSetStatus, onAssignWaiter }) => {
   }, []);
   if (!ctx) return null;
   const table = ctx.table;
+  const currentSplit = table.splits?.[table.activeSplit];
+  const isReady = currentSplit?.courseStage === "ready";
+
   return (
     <div ref={ref} className="ctx-menu" style={{ top: ctx.y, left: ctx.x }}>
+      {isReady && (
+        <>
+          <div className="ctx-item" onClick={() => {
+            const updatedSplits = [...table.splits];
+            updatedSplits[table.activeSplit] = { ...currentSplit, courseStage: "served" };
+            onSetStatus({ ...table, splits: updatedSplits }, "occupied");
+            onClose();
+          }} style={{ color: 'var(--green)', fontWeight: 600 }}>
+            🍽️ Mark Order Served
+          </div>
+          <div className="divider" style={{margin:'4px 6px'}} />
+        </>
+      )}
       <div className="ctx-item" onClick={() => { onSetStatus(table, "available"); onClose(); }}>
         <span className="legend-dot" style={{background:'var(--green)'}}/>Mark Available
       </div>
