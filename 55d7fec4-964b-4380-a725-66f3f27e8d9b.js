@@ -68,6 +68,7 @@ function App({ authUser, onLogout }) {
   const [showNotif, setShowNotif] = React.useState(false);
   const [tipDismissed, setTipDismissed] = React.useState(saved?.tipDismissed || false);
   const prevTablesRef = React.useRef(tables);
+  const [isLoaded, setIsLoaded] = React.useState(false);
 
   React.useEffect(() => {
     if (prevTablesRef.current && prevTablesRef.current.length > 0) {
@@ -279,43 +280,103 @@ function App({ authUser, onLogout }) {
   React.useEffect(() => {
     async function loadFromDb() {
       if (window.supabaseClient) {
-        const dbState = await window.fetchSupabaseState();
-        if (dbState) {
-          if (dbState.settings) setSettings(dbState.settings);
-          if (dbState.tables) {
-            const loaded = [...dbState.tables];
-            if (!loaded.some(t => t.id === "takeaway")) {
-              loaded.push({
-                id: "takeaway",
-                num: "Takeaway",
-                capacity: 0,
-                status: "available",
-                waiter: "",
-                splits: [createSplit("Takeaway")],
-                activeSplit: 0,
-              });
+        try {
+          const dbState = await window.fetchSupabaseState();
+          if (dbState) {
+            if (dbState.settings) setSettings(dbState.settings);
+            if (dbState.tables) {
+              const loaded = [...dbState.tables];
+              if (!loaded.some(t => t.id === "takeaway")) {
+                loaded.push({
+                  id: "takeaway",
+                  num: "Takeaway",
+                  capacity: 0,
+                  status: "available",
+                  waiter: "",
+                  splits: [createSplit("Takeaway")],
+                  activeSplit: 0,
+                });
+              }
+              setTables(loaded);
             }
-            setTables(loaded);
+            if (dbState.menuItems) setMenuItems(dbState.menuItems);
+            if (dbState.orders) setOrders(dbState.orders);
+            if (dbState.reservations) setReservations(dbState.reservations);
+            if (dbState.customers) setCustomers(dbState.customers);
+            if (dbState.staff) setStaff(dbState.staff);
+            showToast("Loaded real-time state from Supabase");
           }
-          if (dbState.menuItems) setMenuItems(dbState.menuItems);
-          if (dbState.orders) setOrders(dbState.orders);
-          if (dbState.reservations) setReservations(dbState.reservations);
-          if (dbState.customers) setCustomers(dbState.customers);
-          if (dbState.staff) setStaff(dbState.staff);
-          showToast("Loaded real-time state from Supabase");
+        } catch (e) {
+          console.error("Failed loading from Supabase:", e);
+        } finally {
+          setIsLoaded(true);
         }
+      } else {
+        setIsLoaded(true);
       }
     }
     loadFromDb();
   }, []);
 
+  // Periodically sync/pull state from Supabase to keep all devices in sync
+  React.useEffect(() => {
+    if (!window.supabaseClient) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const dbState = await window.fetchSupabaseState();
+        if (dbState) {
+          if (dbState.tables) {
+            setTables(prev => {
+              const loaded = [...dbState.tables];
+              if (!loaded.some(t => t.id === "takeaway")) {
+                loaded.push({
+                  id: "takeaway",
+                  num: "Takeaway",
+                  capacity: 0,
+                  status: "available",
+                  waiter: "",
+                  splits: [createSplit("Takeaway")],
+                  activeSplit: 0,
+                });
+              }
+              if (JSON.stringify(prev) !== JSON.stringify(loaded)) {
+                return loaded;
+              }
+              return prev;
+            });
+          }
+          if (dbState.orders) {
+            setOrders(prev => JSON.stringify(prev) !== JSON.stringify(dbState.orders) ? dbState.orders : prev);
+          }
+          if (dbState.reservations) {
+            setReservations(prev => JSON.stringify(prev) !== JSON.stringify(dbState.reservations) ? dbState.reservations : prev);
+          }
+          if (dbState.customers) {
+            setCustomers(prev => JSON.stringify(prev) !== JSON.stringify(dbState.customers) ? dbState.customers : prev);
+          }
+          if (dbState.staff) {
+            setStaff(prev => JSON.stringify(prev) !== JSON.stringify(dbState.staff) ? dbState.staff : prev);
+          }
+          if (dbState.menuItems) {
+            setMenuItems(prev => JSON.stringify(prev) !== JSON.stringify(dbState.menuItems) ? dbState.menuItems : prev);
+          }
+        }
+      } catch (err) {
+        console.warn("Realtime state sync failed:", err);
+      }
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, []);
+
   React.useEffect(() => {
     const state = { settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed, menuVersion: MENU_VERSION };
     saveState(state);
-    if (window.supabaseClient) {
+    if (window.supabaseClient && isLoaded) {
       window.pushStateToSupabase(state);
     }
-  }, [settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed]);
+  }, [settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed, isLoaded]);
 
   // Generate notifications from state
   React.useEffect(() => {
