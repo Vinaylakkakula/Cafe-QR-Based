@@ -761,7 +761,7 @@ function App({ authUser, onLogout }) {
             // Update table items to record the sent quantity
             const table = selectedTable;
             const splits = [...table.splits];
-            splits[table.activeSplit] = { ...splits[table.activeSplit], items: updatedItems, courseStage: "cooking" };
+            splits[table.activeSplit] = { ...splits[table.activeSplit], items: updatedItems, courseStage: "new" };
             updateTable({ ...table, splits });
             
             // Decrement menu stocks
