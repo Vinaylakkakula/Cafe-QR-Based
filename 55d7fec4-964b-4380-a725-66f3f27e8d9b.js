@@ -68,7 +68,13 @@ function App({ authUser, onLogout }) {
   const [showNotif, setShowNotif] = React.useState(false);
   const [tipDismissed, setTipDismissed] = React.useState(saved?.tipDismissed || false);
 
-  React.useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+    return () => clearInterval(t);
+  }, []);
   
   // Auto-route to first permitted view based on role
   React.useEffect(() => {
@@ -187,7 +193,25 @@ function App({ authUser, onLogout }) {
       const key = `res-${r.id}`;
       if (!existingKeys.has(key)) newOnes.push({ id: uid("n"), key, level: "info", title: `${r.name} arriving soon`, msg: `Party of ${r.party} · ${formatTime(new Date(r.ts))}`, ts: Date.now(), read: false });
     });
-    if (newOnes.length) setNotifications(prev => [...newOnes, ...prev].slice(0, 20));
+    if (newOnes.length) {
+      setNotifications(prev => [...newOnes, ...prev].slice(0, 20));
+      if ("Notification" in window && Notification.permission === "granted") {
+        newOnes.forEach(n => {
+          try {
+            const notif = new Notification(`🔔 ${n.title}`, {
+              body: n.msg,
+              requireInteraction: false
+            });
+            notif.onclick = () => {
+              window.focus();
+              notif.close();
+            };
+          } catch (e) {
+            console.warn("Native Notification failed:", e);
+          }
+        });
+      }
+    }
   }, [menuItems, reservations]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
