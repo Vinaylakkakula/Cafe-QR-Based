@@ -142,6 +142,15 @@
   .table-cap, .table-waiter, .table-meta { font-size: 9px !important; }
   .table-total  { font-size: 10px !important; }
   .table-status { display: none !important; }
+  .table-card.preparing .table-status,
+  .table-card.ready .table-status {
+    display: inline-block !important;
+    font-size: 8px !important;
+    padding: 1px 4px !important;
+    border-radius: 6px !important;
+    white-space: nowrap !important;
+    margin-left: 2px !important;
+  }
   .table-card button[title="Show QR code"] {
     top: 6px !important;
     right: 6px !important;

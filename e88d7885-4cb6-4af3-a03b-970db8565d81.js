@@ -57,6 +57,13 @@ const OrderPanel = ({
     ? staff.filter(s => s.role === "Waitstaff" || s.role === "Waiter").map(s => s.name)
     : (window.WAITERS || []);
 
+  const itemsEndRef = React.useRef(null);
+  React.useEffect(() => {
+    if (itemsEndRef.current) {
+      itemsEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [split.items.length]);
+
   return (
     <div className="order-panel">
       <div className="order-head">
@@ -169,6 +176,7 @@ const OrderPanel = ({
             </div>
           ))
         )}
+        <div ref={itemsEndRef} />
       </div>
 
       <div className="totals">

@@ -40,7 +40,7 @@ const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, 
 
   return (
     <div
-      className={`table-card ${table.status} ${selected ? "selected" : ""} ${isReady ? "ready" : ""}`}
+      className={`table-card ${table.status} ${selected ? "selected" : ""} ${isReady ? "ready" : ""} ${isPreparing ? "preparing" : ""}`}
       style={cardStyle}
       onClick={() => onClick(table)}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, table); }}
