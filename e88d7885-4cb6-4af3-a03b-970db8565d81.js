@@ -57,10 +57,10 @@ const OrderPanel = ({
     ? staff.filter(s => s.role === "Waitstaff" || s.role === "Waiter").map(s => s.name)
     : (window.WAITERS || []);
 
-  const itemsEndRef = React.useRef(null);
+  const orderItemsRef = React.useRef(null);
   React.useEffect(() => {
-    if (itemsEndRef.current) {
-      itemsEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (orderItemsRef.current) {
+      orderItemsRef.current.scrollTop = orderItemsRef.current.scrollHeight;
     }
   }, [split.items.length]);
 
@@ -144,7 +144,7 @@ const OrderPanel = ({
         )}
       </div>
 
-      <div className="order-items">
+      <div ref={orderItemsRef} className="order-items">
         {!hasItems ? (
           <div className="order-empty">
             <div className="order-empty-icon">🍽</div>
@@ -176,7 +176,6 @@ const OrderPanel = ({
             </div>
           ))
         )}
-        <div ref={itemsEndRef} />
       </div>
 
       <div className="totals">
