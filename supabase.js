@@ -100,7 +100,7 @@ async function fetchSupabaseState() {
       orders = ordersRes.data.map(o => ({
         id: o.id,
         ts: parseInt(o.ts),
-        tableNum: o.table_num,
+        tableNum: o.table_num === 9999 ? "Takeaway" : o.table_num,
         waiter: o.waiter || "",
         splitLabel: o.split_label,
         split: o.split,
@@ -120,7 +120,7 @@ async function fetchSupabaseState() {
         party: r.party,
         phone: r.phone || "",
         note: r.note || "",
-        tableNum: r.table_num,
+        tableNum: r.table_num === 9999 ? "Takeaway" : r.table_num,
         status: r.status
       }));
     }
@@ -174,15 +174,17 @@ async function pushStateToSupabase(state) {
     
     // Sync Tables
     if (tables && tables.length > 0) {
-      const dbTables = tables.map(t => ({
-        id: t.id,
-        num: t.num,
-        capacity: t.capacity,
-        status: t.status,
-        waiter: t.waiter || null,
-        splits: t.splits,
-        active_split: t.activeSplit
-      }));
+      const dbTables = tables
+        .filter(t => t.id !== "takeaway") // Filter out virtual takeaway table to avoid integer casting errors for "Takeaway"
+        .map(t => ({
+          id: t.id,
+          num: t.num,
+          capacity: t.capacity,
+          status: t.status,
+          waiter: t.waiter || null,
+          splits: t.splits,
+          active_split: t.activeSplit
+        }));
       await supabaseClient.from("pos_tables").upsert(dbTables);
     }
     
@@ -207,7 +209,7 @@ async function pushStateToSupabase(state) {
       const dbOrders = orders.map(o => ({
         id: o.id,
         ts: o.ts,
-        table_num: o.tableNum,
+        table_num: o.tableNum === "Takeaway" ? 9999 : (typeof o.tableNum === "number" ? o.tableNum : parseInt(o.tableNum) || 0),
         waiter: o.waiter || null,
         split_label: o.splitLabel,
         split: o.split,
@@ -226,7 +228,7 @@ async function pushStateToSupabase(state) {
         party: r.party,
         phone: r.phone || null,
         note: r.note || null,
-        table_num: r.tableNum,
+        table_num: r.tableNum === "Takeaway" ? 9999 : (typeof r.tableNum === "number" ? r.tableNum : parseInt(r.tableNum) || null),
         status: r.status
       }));
       await supabaseClient.from("pos_reservations").upsert(dbRes);

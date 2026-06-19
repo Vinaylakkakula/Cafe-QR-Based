@@ -69,6 +69,7 @@ function App({ authUser, onLogout }) {
   const [tipDismissed, setTipDismissed] = React.useState(saved?.tipDismissed || false);
   const prevTablesRef = React.useRef(tables);
   const [isLoaded, setIsLoaded] = React.useState(false);
+  const lastPushTimeRef = React.useRef(0);
 
   React.useEffect(() => {
     if (prevTablesRef.current && prevTablesRef.current.length > 0) {
@@ -323,6 +324,11 @@ function App({ authUser, onLogout }) {
     if (!window.supabaseClient) return;
 
     const interval = setInterval(async () => {
+      // Skip poll pull if we recently pushed local changes (within 6 seconds) or if a modal is open
+      // (user is actively interacting/typing/checking out/sending KOT) to prevent overwrite races
+      if (Date.now() - lastPushTimeRef.current < 6000 || modal !== null) {
+        return;
+      }
       try {
         const dbState = await window.fetchSupabaseState();
         if (dbState) {
@@ -340,8 +346,16 @@ function App({ authUser, onLogout }) {
                   activeSplit: 0,
                 });
               }
-              if (JSON.stringify(prev) !== JSON.stringify(loaded)) {
-                return loaded;
+              // Merge: Preserve local selected table edits to prevent data wiping while editing
+              const merged = loaded.map(t => {
+                if (selectedId && t.id === selectedId) {
+                  const localSelected = prev.find(p => p.id === selectedId);
+                  return localSelected ? localSelected : t;
+                }
+                return t;
+              });
+              if (JSON.stringify(prev) !== JSON.stringify(merged)) {
+                return merged;
               }
               return prev;
             });
@@ -368,12 +382,13 @@ function App({ authUser, onLogout }) {
     }, 4500);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedId, modal]);
 
   React.useEffect(() => {
     const state = { settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed, menuVersion: MENU_VERSION };
     saveState(state);
     if (window.supabaseClient && isLoaded) {
+      lastPushTimeRef.current = Date.now();
       window.pushStateToSupabase(state);
     }
   }, [settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed, isLoaded]);
