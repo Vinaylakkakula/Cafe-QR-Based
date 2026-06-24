@@ -275,7 +275,8 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
   const acceptOrder = () => {
     if (!pendingQROrder) return;
     const o = pendingQROrder;
-    const targetTable = tables.find(t => t.num === parseInt(o.tableNum));
+    const isTakeawayNum = parseInt(o.tableNum) === 9999;
+    const targetTable = tables.find(t => isTakeawayNum ? (t.id === "takeaway" || t.num === "Takeaway") : t.num === parseInt(o.tableNum));
     if (!targetTable) {
       showToast(`Table ${o.tableNum} not found — cannot auto-add`);
       setPendingQROrder(null);
