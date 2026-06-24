@@ -67,7 +67,7 @@ async function fetchSupabaseState() {
     if (tablesRes.data && tablesRes.data.length > 0) {
       tables = tablesRes.data.map(t => ({
         id: t.id,
-        num: t.num,
+        num: (t.num === 9999 || t.id === "takeaway") ? "Takeaway" : t.num,
         capacity: t.capacity,
         status: t.status,
         waiter: t.waiter || "",
@@ -175,10 +175,9 @@ async function pushStateToSupabase(state) {
     // Sync Tables
     if (tables && tables.length > 0) {
       const dbTables = tables
-        .filter(t => t.id !== "takeaway") // Filter out virtual takeaway table to avoid integer casting errors for "Takeaway"
         .map(t => ({
           id: t.id,
-          num: t.num,
+          num: (t.id === "takeaway" || t.num === "Takeaway") ? 9999 : (typeof t.num === "number" ? t.num : parseInt(t.num) || 0),
           capacity: t.capacity,
           status: t.status,
           waiter: t.waiter || null,

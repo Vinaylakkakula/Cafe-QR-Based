@@ -618,7 +618,11 @@ function loadFallbackMenu() {
 // ── Render ──────────────────────────────────────────────────────────────────
 function renderApp() {
   document.getElementById("cafeName").textContent = restaurantName;
-  document.getElementById("tableTag").textContent = `🪑 Table ${tableNum}`;
+  if (tableNum === 9999 || tableNum === "9999" || (typeof tableNum === "string" && tableNum.toLowerCase() === "takeaway")) {
+    document.getElementById("tableTag").textContent = `🛍️ Takeaway`;
+  } else {
+    document.getElementById("tableTag").textContent = `🪑 Table ${tableNum}`;
+  }
   document.title = `Order — ${restaurantName}`;
   renderCategories();
   renderMenu();
@@ -772,10 +776,11 @@ async function placeOrder() {
   const orderId = "QR" + Date.now().toString(36).toUpperCase().slice(-6);
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
 
+  const isTakeaway = (tableNum === 9999 || tableNum === "9999" || (typeof tableNum === "string" && tableNum.toLowerCase() === "takeaway"));
   const order = {
     id: orderId,
     ts: Date.now(),
-    tableNum: parseInt(tableNum),
+    tableNum: isTakeaway ? 9999 : parseInt(tableNum),
     items: JSON.parse(JSON.stringify(cart)),
     note,
     total,
@@ -841,8 +846,13 @@ function showSuccessScreen(order) {
   const ss = document.getElementById("successScreen");
   ss.classList.add("show");
   document.getElementById("successOrderId").textContent = `#${order.id}`;
-  document.getElementById("successSub").innerHTML =
-    `Your order has been sent to the kitchen.<br>We'll bring it to <strong>Table ${order.tableNum}</strong> shortly.`;
+  if (order.tableNum === 9999) {
+    document.getElementById("successSub").innerHTML =
+      `Your order has been sent to the kitchen.<br>Please pick it up at the counter shortly.`;
+  } else {
+    document.getElementById("successSub").innerHTML =
+      `Your order has been sent to the kitchen.<br>We'll bring it to <strong>Table ${order.tableNum}</strong> shortly.`;
+  }
   document.getElementById("successItems").innerHTML =
     order.items.map(i => `
       <div class="osc-item">

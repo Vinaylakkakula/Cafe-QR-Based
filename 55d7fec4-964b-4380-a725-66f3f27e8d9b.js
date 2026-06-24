@@ -371,7 +371,7 @@ function App({ authUser, onLogout }) {
                 if (!localTable) return t;
                 
                 // If it is the virtual takeaway table, preserve local takeaway state
-                if (t.id === "takeaway") {
+                if (t.id === "takeaway" && !window.supabaseClient) {
                   return localTable;
                 }
                 
