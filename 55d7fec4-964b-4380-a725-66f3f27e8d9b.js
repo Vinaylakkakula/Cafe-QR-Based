@@ -370,6 +370,11 @@ function App({ authUser, onLogout }) {
                 const localTable = prev.find(p => p.id === t.id);
                 if (!localTable) return t;
                 
+                // If it is the virtual takeaway table, preserve local takeaway state
+                if (t.id === "takeaway") {
+                  return localTable;
+                }
+                
                 // If remote table was checked out (marked available), accept the clear
                 if (t.status === "available" && localTable.status !== "available") {
                   return t;
