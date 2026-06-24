@@ -226,6 +226,148 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
   const [filterSearch, setFilterSearch] = React.useState("");
   const [filterAvail, setFilterAvail] = React.useState("all");
 
+  // WhatsApp states & effects
+  const [waStatus, setWaStatus] = React.useState("Disconnected");
+  const [waQR, setWaQR] = React.useState("");
+  const [waMessages, setWaMessages] = React.useState([]);
+  const [waRequests, setWaRequests] = React.useState([]);
+  const [waStats, setWaStats] = React.useState({ totalOrders: 0, revenue: "0.00", pendingRequests: 0, avgRating: "N/A" });
+  const [narratedReport, setNarratedReport] = React.useState("");
+  const [loadingReport, setLoadingReport] = React.useState(false);
+
+  React.useEffect(() => {
+    if (tab !== "whatsapp") return;
+    
+    // Fetch WhatsApp status
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/status");
+        if (res.ok) {
+          const data = await res.json();
+          setWaStatus(data.status);
+          setWaQR(data.qr || "");
+        }
+      } catch (err) {
+        // Fallback to Supabase
+        if (window.supabaseClient) {
+          const { data } = await window.supabaseClient.from("whatsapp_sessions").select("*").eq("session_id", "default").maybeSingle();
+          if (data) {
+            setWaStatus(data.connection_status);
+            setWaQR(data.qr_code || "");
+          }
+        }
+      }
+    };
+    
+    // Fetch logs and service requests from Supabase
+    const fetchSupabaseLogs = async () => {
+      if (!window.supabaseClient) return;
+      try {
+        const { data: msgs } = await window.supabaseClient
+          .from("messages")
+          .select("*")
+          .order("timestamp", { ascending: false })
+          .limit(15);
+        if (msgs) setWaMessages(msgs);
+
+        const { data: reqs } = await window.supabaseClient
+          .from("service_requests")
+          .select("*")
+          .order("ts", { ascending: false })
+          .limit(15);
+        if (reqs) setWaRequests(reqs);
+        
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const { data: qrOrders } = await window.supabaseClient
+          .from("pos_qr_orders")
+          .select("total, note")
+          .gte("ts", todayStart.getTime());
+        
+        const waOrders = qrOrders ? qrOrders.filter(o => o.note && o.note.includes("WhatsApp")) : [];
+        const totalRev = waOrders.reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
+        const pendingReqsCount = reqs ? reqs.filter(r => r.status === "pending").length : 0;
+        
+        const feedbackMsgs = msgs ? msgs.filter(m => m.content && m.content.includes("Feedback Rating")) : [];
+        let totalRating = 0;
+        let ratingCount = 0;
+        feedbackMsgs.forEach(m => {
+          const match = m.content.match(/Rating: (\d)\/5/);
+          if (match) {
+            totalRating += parseInt(match[1]);
+            ratingCount++;
+          }
+        });
+        const avg = ratingCount > 0 ? (totalRating / ratingCount).toFixed(1) : "N/A";
+
+        setWaStats({
+          totalOrders: waOrders.length,
+          revenue: totalRev.toFixed(2),
+          pendingRequests: pendingReqsCount,
+          avgRating: avg
+        });
+      } catch (err) {
+        console.error("Error loading Supabase logs:", err);
+      }
+    };
+
+    fetchStatus();
+    fetchSupabaseLogs();
+    
+    const interval = setInterval(() => {
+      fetchStatus();
+      fetchSupabaseLogs();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [tab]);
+
+  const handleRestartWhatsApp = async () => {
+    setWaStatus("Connecting");
+    try {
+      await fetch("http://localhost:5000/api/restart", { method: "POST" });
+      showToast("✓ Initiated WhatsApp reconnection...");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to connect to backend server.");
+    }
+  };
+
+  const handleCompleteRequest = async (id) => {
+    if (!window.supabaseClient) return;
+    try {
+      const { error } = await window.supabaseClient
+        .from("service_requests")
+        .update({ status: "completed" })
+        .eq("id", id);
+      
+      if (error) throw error;
+      setWaRequests(prev => prev.map(r => r.id === id ? { ...r, status: "completed" } : r));
+      showToast("✓ Service request marked completed");
+    } catch (err) {
+      console.error(err);
+      showToast("Error updating request status.");
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    setLoadingReport(true);
+    setNarratedReport("");
+    try {
+      const res = await fetch("http://localhost:5000/api/whatsapp/daily-report");
+      if (res.ok) {
+        const data = await res.json();
+        setNarratedReport(data.report);
+      } else {
+        showToast("Failed to generate report.");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Could not contact report service.");
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
   // ---- Menu CRUD handlers ----
   const handleAddItem = (item) => {
     setMenuItems(prev => [...prev, item]);
@@ -292,6 +434,7 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
     { id: "categories", label: "Categories", icon: "filter" },
     { id: "qrcodes", label: "Table QR Codes", icon: "grid" },
     { id: "dashboard", label: "Admin Dashboard", icon: "chart" },
+    { id: "whatsapp", label: "WhatsApp AI", icon: "phone" },
   ];
 
   return (
@@ -713,6 +856,168 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
         </div>
       )}
 
+      {/* ===== WHATSAPP AI TAB ===== */}
+      {tab === "whatsapp" && (
+        <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="section-head">
+            <div>
+              <div className="section-title">WhatsApp AI Assistant</div>
+              <div className="section-sub">Manage QR Code pairing, track automated customer logs, service requests and feedback</div>
+            </div>
+            <button className="btn btn-secondary" onClick={handleRestartWhatsApp} disabled={waStatus === "Connecting"}>
+              <Icon name="phone" size={13} /> {waStatus === "Connecting" ? "Connecting..." : "Reconnect Client"}
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            {/* Status Card */}
+            <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, padding: "18px 20px" }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>📡 Connection Status</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <span style={{
+                  width: 10, height: 10, borderRadius: "50%",
+                  background: waStatus === "Connected" ? "var(--green)" : waStatus === "QR_Ready" ? "var(--amber)" : "var(--red)",
+                  boxShadow: `0 0 10px ${waStatus === "Connected" ? "var(--green)" : waStatus === "QR_Ready" ? "var(--amber)" : "var(--red)"}`
+                }} />
+                <span style={{ fontSize: 15, fontWeight: 700 }}>{waStatus}</span>
+              </div>
+              {waStatus === "QR_Ready" && waQR ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, background: "#fff", padding: 16, borderRadius: 8 }}>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(waQR)}`}
+                    alt="WhatsApp QR Code"
+                    style={{ width: 220, height: 220 }}
+                  />
+                  <span style={{ color: "#333", fontSize: 12, fontWeight: 600 }}>Scan with your WhatsApp Linked Devices</span>
+                </div>
+              ) : waStatus === "Connected" ? (
+                <div style={{ color: "var(--green)", fontSize: 13, background: "rgba(107,191,123,.12)", padding: "12px 14px", borderRadius: 8 }}>
+                  ✓ AI WhatsApp Assistant is active and listening to customer queries.
+                </div>
+              ) : (
+                <div style={{ color: "var(--text-dim)", fontSize: 13 }}>
+                  Assistant is offline. Click "Reconnect Client" to retrieve a new pairing QR code.
+                </div>
+              )}
+            </div>
+
+            {/* Daily Stats Card */}
+            <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, padding: "18px 20px" }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>📈 WhatsApp Activity Today</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ background: "var(--bg-2)", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>WA Orders</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "var(--amber-bright)", fontFamily: "JetBrains Mono" }}>{waStats.totalOrders}</div>
+                </div>
+                <div style={{ background: "var(--bg-2)", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>WA Revenue</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "var(--green)", fontFamily: "JetBrains Mono" }}>₹{waStats.revenue}</div>
+                </div>
+                <div style={{ background: "var(--bg-2)", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Pending Table Requests</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "var(--blue)", fontFamily: "JetBrains Mono" }}>{waStats.pendingRequests}</div>
+                </div>
+                <div style={{ background: "var(--bg-2)", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>Average Rating</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "var(--violet)", fontFamily: "JetBrains Mono" }}>{waStats.avgRating} ★</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 20 }}>
+            {/* Table Service Requests Card */}
+            <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, padding: "18px 20px" }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>🛎 Active Service Requests</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
+                {waRequests.length === 0 ? (
+                  <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>No active service requests.</div>
+                ) : (
+                  waRequests.map(req => (
+                    <div key={req.id} style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      background: req.status === "pending" ? "rgba(242,164,58,0.06)" : "var(--bg-2)",
+                      border: `1px solid ${req.status === "pending" ? "var(--amber-dim)" : "var(--line)"}`,
+                      padding: "10px 14px", borderRadius: 8
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                          <span>Table {req.table_num}</span>
+                          <span style={{ fontSize: 11, background: "var(--bg-3)", padding: "1px 6px", borderRadius: 4, textTransform: "uppercase", color: "var(--amber-bright)" }}>{req.request_type}</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
+                          Received: {new Date(req.ts).toLocaleTimeString()}
+                        </div>
+                      </div>
+                      {req.status === "pending" ? (
+                        <button className="btn btn-secondary" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => handleCompleteRequest(req.id)}>
+                          Complete
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "var(--green)", fontWeight: 600 }}>✓ Done</span>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Daily Owner Report Card */}
+            <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, padding: "18px 20px" }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>📝 Narrated Daily Report</div>
+              {narratedReport ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <pre style={{
+                    background: "var(--bg-2)", padding: 12, borderRadius: 8, fontSize: 11,
+                    maxHeight: 180, overflowY: "auto", whiteSpace: "pre-wrap", fontFamily: "inherit"
+                  }}>
+                    {narratedReport}
+                  </pre>
+                  <button className="btn btn-primary" onClick={() => {
+                    navigator.clipboard.writeText(narratedReport);
+                    showToast("✓ Copied report to clipboard");
+                  }}>
+                    Copy Report
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center", justifyContent: "center", padding: 20 }}>
+                  <span style={{ fontSize: 12, color: "var(--text-dim)" }}>Generate AI-narrated summary of today's business.</span>
+                  <button className="btn btn-secondary" onClick={handleGenerateReport} disabled={loadingReport}>
+                    {loadingReport ? "Generating..." : "Generate Report"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Active Chats Logs */}
+          <div style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, padding: "18px 20px" }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 14 }}>💬 Automated AI Customer Logs</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 350, overflowY: "auto" }}>
+              {waMessages.length === 0 ? (
+                <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>No logs logged yet.</div>
+              ) : (
+                waMessages.map(msg => (
+                  <div key={msg.id} style={{ background: "var(--bg-2)", border: "1px solid var(--line)", padding: 12, borderRadius: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontWeight: 600, fontSize: 12 }}>{msg.sender_name} ({msg.sender_phone})</span>
+                      <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{new Date(msg.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text)", marginBottom: 6 }}>
+                      <strong>User:</strong> "{msg.content}"
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--bg-3)", padding: 8, borderRadius: 6 }}>
+                      <strong>AI Reply:</strong> {msg.suggested_reply}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* ===== MODALS ===== */}
       {itemModal?.mode === "add" && (
         <MenuItemModal categories={categories} onClose={() => setItemModal(null)} onSave={handleAddItem} />
