@@ -144,22 +144,40 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
   React.useEffect(() => {
     if (pendingQROrder) {
       playNotificationSound();
+      // Send notification via Service Worker for background support
       if ("Notification" in window && Notification.permission === "granted") {
         try {
           const totalAmount = pendingQROrder.items.reduce((s, i) => s + i.price * i.qty, 0);
           const preview = pendingQROrder.items.slice(0, 2).map(i => `${i.qty}× ${i.name}`).join(", ");
           const more = pendingQROrder.items.length > 2 ? ` +${pendingQROrder.items.length - 2} more` : "";
-          const notif = new Notification(`🔔 New QR Order — Table ${pendingQROrder.tableNum}`, {
-            body: `${preview}${more}\nTotal: ${currency || "₹"}${totalAmount.toFixed(2)}${pendingQROrder.note ? `\nNote: ${pendingQROrder.note}` : ""}`,
-            tag: `qr-order-${pendingQROrder.id}`,
-            requireInteraction: true
-          });
-          notif.onclick = () => {
-            window.focus();
-            notif.close();
-          };
+          const notifTitle = `🔔 New QR Order — Table ${pendingQROrder.tableNum}`;
+          const notifBody = `${preview}${more}\nTotal: ${currency || "₹"}${totalAmount.toFixed(2)}${pendingQROrder.note ? `\nNote: ${pendingQROrder.note}` : ""}`;
+          const notifTag = `qr-order-${pendingQROrder.id}`;
+
+          // Use Service Worker notification (works in background!)
+          if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'SHOW_NOTIFICATION',
+              title: notifTitle,
+              body: notifBody,
+              tag: notifTag,
+              data: { orderId: pendingQROrder.id, tableNum: pendingQROrder.tableNum }
+            });
+          } else {
+            // Fallback to regular Notification API
+            const notif = new Notification(notifTitle, {
+              body: notifBody,
+              tag: notifTag,
+              icon: '/icon-512.png',
+              requireInteraction: true
+            });
+            notif.onclick = () => {
+              window.focus();
+              notif.close();
+            };
+          }
         } catch (e) {
-          console.warn("Native Notification failed:", e);
+          console.warn("Notification failed:", e);
         }
       }
     }

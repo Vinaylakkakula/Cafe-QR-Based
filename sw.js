@@ -1,5 +1,5 @@
 // ── Service Worker for MAHA FAST FOOD COURT PWA ──────────────────────────────
-const CACHE_NAME = 'maha-pos-v1';
+const CACHE_NAME = 'maha-pos-v2';
 
 // Core files to cache for offline use
 const CORE_ASSETS = [
@@ -73,4 +73,53 @@ self.addEventListener('fetch', (event) => {
       });
     })
   );
+});
+
+// ── Push Notification Support ────────────────────────────────────────────────
+// Handle messages from the main app to show notifications
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, body, tag, data } = event.data;
+    event.waitUntil(
+      self.registration.showNotification(title, {
+        body: body,
+        icon: '/icon-512.png',
+        badge: '/icon-512.png',
+        tag: tag || 'maha-pos-notification',
+        requireInteraction: true,
+        vibrate: [300, 100, 300, 100, 300],
+        data: data || {},
+        actions: [
+          { action: 'view', title: '👀 View Order' },
+          { action: 'dismiss', title: '✕ Dismiss' }
+        ]
+      })
+    );
+  }
+});
+
+// Handle notification click — focus the app or open it
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') return;
+
+  // Focus existing window or open new one
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Try to focus an existing POS window
+      for (const client of clientList) {
+        if (client.url.includes('index.html') || client.url.endsWith('/')) {
+          return client.focus();
+        }
+      }
+      // No existing window — open new one
+      return self.clients.openWindow('/');
+    })
+  );
+});
+
+// Handle notification close
+self.addEventListener('notificationclose', (event) => {
+  console.log('[SW] Notification closed:', event.notification.tag);
 });

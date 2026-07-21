@@ -85,6 +85,17 @@ const KitchenDisplay = ({ tables, onUpdateTable, settings, showToast }) => {
       if (showToast) {
         showToast(`🔔 New order received for Table T${newTableNum}!`);
       }
+      // Send background notification via Service Worker
+      if ("Notification" in window && Notification.permission === "granted" &&
+          navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title: `🍳 Kitchen — New Order!`,
+          body: `Table T${newTableNum} has new items to prepare`,
+          tag: `kds-order-t${newTableNum}-${Date.now()}`,
+          data: { tableNum: newTableNum }
+        });
+      }
     }
 
     prevTicketsRef.current = tickets;
