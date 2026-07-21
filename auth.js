@@ -264,7 +264,7 @@ const LoginScreen = ({ onLogin }) => {
             fontSize:32, margin:"0 auto 16px",
             boxShadow:"0 8px 24px rgba(249,168,37,.35), inset 0 1px 0 rgba(255,255,255,0.2)"
           }}>🍽️</div>
-          <div style={{fontSize:24, fontWeight:800, color:"#fff", letterSpacing:"-0.02em"}}>Vinay Cafe</div>
+          <div style={{fontSize:24, fontWeight:800, color:"#fff", letterSpacing:"-0.02em"}}>MAHA FAST FOOD COURT</div>
           <div style={{fontSize:12, color:"#9ca3af", marginTop:6, fontWeight:500}}>Point of Sale — Staff Access</div>
         </div>
 

@@ -115,17 +115,17 @@ INSERT INTO pos_settings (id, data) VALUES ('global', '{
 
 -- Insert default Tables (1 to 10 + Takeaway)
 INSERT INTO pos_tables (id, num, capacity, status, waiter, splits, active_split) VALUES
-('t1', 1, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t2', 2, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t3', 3, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t4', 4, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t5', 5, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t6', 6, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t7', 7, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t8', 8, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t9', 9, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('t10', 10, 4, 'available', NULL, '[{"orders":[]}]'::jsonb, 0),
-('takeaway', 9999, 99, 'available', NULL, '[{"orders":[]}]'::jsonb, 0);
+('t1', 1, 4, 'available', NULL, '[{"id":"s_t1","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t2', 2, 4, 'available', NULL, '[{"id":"s_t2","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t3', 3, 4, 'available', NULL, '[{"id":"s_t3","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t4', 4, 4, 'available', NULL, '[{"id":"s_t4","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t5', 5, 4, 'available', NULL, '[{"id":"s_t5","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t6', 6, 4, 'available', NULL, '[{"id":"s_t6","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t7', 7, 4, 'available', NULL, '[{"id":"s_t7","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t8', 8, 4, 'available', NULL, '[{"id":"s_t8","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t9', 9, 4, 'available', NULL, '[{"id":"s_t9","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('t10', 10, 4, 'available', NULL, '[{"id":"s_t10","label":"Main","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0),
+('takeaway', 9999, 99, 'available', NULL, '[{"id":"s_takeaway","label":"Takeaway","items":[],"taxRate":null,"discount":{"type":"flat","value":0},"tip":0,"includeService":true,"kotSent":false,"courseStage":"new"}]'::jsonb, 0);
 
 -- Insert Maha Fast Food Court Menu Items
 INSERT INTO pos_menu (id, cat, name, desc_text, price, veg, available, stock, img) VALUES
