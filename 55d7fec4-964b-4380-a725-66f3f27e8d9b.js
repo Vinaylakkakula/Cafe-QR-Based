@@ -612,9 +612,10 @@ function App({ authUser, onLogout }) {
   const totalRevenue = orders.reduce((s, o) => s + o.payment.amount, 0);
   const totalCount = orders.length;
   const totalAvg = totalCount > 0 ? totalRevenue / totalCount : 0;
-  const occupiedCount = tables.filter(t => t.status === "occupied").length;
-  const totalSeats = tables.reduce((s, t) => s + t.capacity, 0);
-  const seatedEst = tables.filter(t => t.status === "occupied").reduce((s, t) => s + t.capacity, 0);
+  const physicalTables = tables.filter(t => t.id !== "takeaway" && t.num !== 9999 && t.num !== "Takeaway");
+  const occupiedCount = physicalTables.filter(t => t.status === "occupied").length;
+  const totalSeats = physicalTables.reduce((s, t) => s + t.capacity, 0);
+  const seatedEst = physicalTables.filter(t => t.status === "occupied").reduce((s, t) => s + t.capacity, 0);
   const occupancyPct = totalSeats > 0 ? Math.round((seatedEst / totalSeats) * 100) : 0;
 
   const pageTitle = {
