@@ -6,6 +6,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 window.SUPABASE_CONFIG = {
-  url: "https://ytpdutdcoajyxegypkkv.supabase.co",
-  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0cGR1dGRjb2FqeXhlZ3lwa2t2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzA3NDcsImV4cCI6MjA5NjE0Njc0N30.fLJsMeQuHka4ntoMwwJ1jGrYWKAgXEdBsVR1WGaqu70"
+  url: "https://hjambctdtlitkqmyldnu.supabase.co",
+  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhqYW1iY3RkdGxpdGtxbXlsZG51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2NDU0MjcsImV4cCI6MjEwMDIyMTQyN30.3nzkPQSLZKUfcTmA_X_TQ9z8q8o0FIcTBJJQLUyeCtI"
 };

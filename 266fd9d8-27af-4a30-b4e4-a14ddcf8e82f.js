@@ -12,33 +12,29 @@ if (typeof window !== 'undefined' && !window.__resources) {
 }
 
 const DEFAULT_SETTINGS = {
-  restaurantName: "Vinay Cafe",
-  address: "214 Vine Street, Riverside\n+1 (415) 555-0184",
+  restaurantName: "MAHA FAST FOOD COURT",
+  address: "Darbar Street, Korutla\n+91 98429 23119",
   taxId: "TIN 87-4429301",
-  taxRate: 8.5,
-  serviceChargeRate: 5,
+  taxRate: 5.0,
+  serviceChargeRate: 0,
   currency: "₹",
-  cashierName: "Morgan Reyes",
-  tipEnabled: true,
-  serviceChargeEnabled: true,
-  tableCount: 16,
+  cashierName: "Cashier",
+  tipEnabled: false,
+  serviceChargeEnabled: false,
+  tableCount: 10,
   heroImage: window.__resources["hero"],
   themeColor: "amber",
   logoUrl: "",
   receiptHeader: "Thank you for dining with us!",
-  receiptFooter: "Follow us on Instagram @yourcafe",
+  receiptFooter: "Follow us on Instagram @mahafastfoodcourt",
   qrNotificationSound: "loud",
 };
 
 const MENU_CATEGORIES = [
+  { id: "veg", name: "Veg", icon: "🥬" },
+  { id: "egg", name: "Egg", icon: "🥚" },
+  { id: "chicken", name: "Chicken", icon: "🍗" },
   { id: "starters", name: "Starters", icon: "🥗" },
-  { id: "mains", name: "Mains", icon: "🍽" },
-  { id: "grill", name: "From the Grill", icon: "🔥" },
-  { id: "pasta", name: "Pasta", icon: "🍝" },
-  { id: "sides", name: "Sides", icon: "🥔" },
-  { id: "desserts", name: "Desserts", icon: "🍰" },
-  { id: "drinks", name: "Drinks", icon: "🍷" },
-  { id: "bakery", name: "Bakery", icon: "🥐" },
 ];
 
 // Using Unsplash images (hotlinkable, no auth needed)

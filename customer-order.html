@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Order — Vinay Cafe</title>
+<title>Order — MAHA FAST FOOD COURT</title>
 <style>
   :root {
     --bg: #0f1114;
@@ -370,7 +370,7 @@
 <div id="mainApp" style="display:none">
   <header class="header">
     <div class="header-left">
-      <div class="cafe-name" id="cafeName">Vinay Cafe</div>
+      <div class="cafe-name" id="cafeName">MAHA FAST FOOD COURT</div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <div class="table-tag" id="tableTag">🪑 Table —</div>
         <span id="dbStatus" style="font-size: 10px; font-weight: 600; color: var(--text-muted)">● Connecting...</span>
@@ -445,7 +445,7 @@ let currency = "₹";
 let menuItems = [];
 let categories = [];
 let cart = []; // [{ id, name, price, qty, note, veg, img }]
-let restaurantName = "Vinay Cafe";
+let restaurantName = "MAHA FAST FOOD COURT";
 
 // ── Supabase client for customer page ──────────────────────────────────────
 let customerSupabase = null;
@@ -529,7 +529,7 @@ async function loadPOSState() {
         }));
         // Derive categories from menu items
         const catSet = [...new Set(menuItems.map(i => i.cat))];
-        const catIcons = { starters:"🥗", mains:"🍽", grill:"🔥", pasta:"🍝", sides:"🥔", desserts:"🍰", drinks:"🍷", beverages:"☕", snacks:"🍿", soups:"🍜", salads:"🥗", biryani:"🍚", breads:"🫓", rice:"🍚", thali:"🍛" };
+        const catIcons = { veg:"🥬", egg:"🥚", chicken:"🍗", starters:"🥗", mains:"🍽", grill:"🔥", pasta:"🍝", sides:"🥔", desserts:"🍰", drinks:"🍷", beverages:"☕", snacks:"🍿", soups:"🍜", salads:"🥗", biryani:"🍚", breads:"🫓", rice:"🍚", thali:"🍛" };
         categories = catSet.map(c => ({
           id: c,
           name: c.charAt(0).toUpperCase() + c.slice(1),
