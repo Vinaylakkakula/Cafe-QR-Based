@@ -1,0 +1,22 @@
+{
+  "name": "MAHA FAST FOOD COURT — Order",
+  "short_name": "MAHA Order",
+  "description": "Scan QR & Order from your table at MAHA FAST FOOD COURT",
+  "start_url": "/customer-order.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1114",
+  "theme_color": "#f2a43a",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food"],
+  "lang": "en",
+  "dir": "ltr"
+}

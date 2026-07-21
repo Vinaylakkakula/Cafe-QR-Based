@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Order — MAHA FAST FOOD COURT</title>
+<meta name="description" content="Scan QR & Order from your table at MAHA FAST FOOD COURT">
+<meta name="theme-color" content="#f2a43a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MAHA Order">
+<link rel="manifest" href="manifest-customer.json">
+<link rel="apple-touch-icon" href="icon-512.png">
 <style>
   :root {
     --bg: #0f1114;
@@ -885,6 +892,16 @@ function showToast(msg) {
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 window.addEventListener("DOMContentLoaded", init);
+</script>
+<script>
+// ── PWA Service Worker Registration ──────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+      .catch(err => console.warn('[PWA] SW registration failed:', err));
+  });
+}
 </script>
 </body>
 </html>
