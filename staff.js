@@ -5,6 +5,7 @@ const StaffView = ({ staff, setStaff, showToast }) => {
   const [selectedStaffId, setSelectedStaffId] = React.useState(staff[0]?.id || null);
   const [search, setSearch] = React.useState("");
   const [modal, setModal] = React.useState(null); // { type: 'add'|'edit', data?: any }
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState(null);
   
   // Track mobile layout state
   const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 768);
@@ -24,6 +25,7 @@ const StaffView = ({ staff, setStaff, showToast }) => {
 
   const selectWorker = (id) => {
     setSelectedStaffId(id);
+    setDeleteConfirmId(null);
     if (isMobile) {
       setMobileMode("details");
     }
@@ -115,11 +117,15 @@ const StaffView = ({ staff, setStaff, showToast }) => {
   };
 
   const handleDeleteStaff = (id) => {
-    if (confirm("Are you sure you want to remove this staff member?")) {
+    if (deleteConfirmId === id) {
       setStaff(prev => prev.filter(w => w.id !== id));
       showToast("Staff member removed");
       setSelectedStaffId(null);
+      setDeleteConfirmId(null);
       if (isMobile) setMobileMode("list");
+    } else {
+      setDeleteConfirmId(id);
+      showToast("Click 'Remove' again to confirm deletion");
     }
   };
 
@@ -258,8 +264,8 @@ const StaffView = ({ staff, setStaff, showToast }) => {
                   <button onClick={() => setModal({ type: "edit", data: selectedWorker })} className="btn btn-secondary" style={{ padding: "8px 14px", fontSize: 12, flex: isMobile ? 1 : "none" }}>
                     ✏️ Edit
                   </button>
-                  <button onClick={() => handleDeleteStaff(selectedWorker.id)} className="btn btn-secondary" style={{ padding: "8px 14px", fontSize: 12, borderColor: "var(--red)", color: "var(--red)", flex: isMobile ? 1 : "none" }}>
-                    🗑 Remove
+                  <button onClick={() => handleDeleteStaff(selectedWorker.id)} className="btn btn-secondary" style={{ padding: "8px 14px", fontSize: 12, borderColor: "var(--red)", color: "var(--red)", background: deleteConfirmId === selectedWorker.id ? "rgba(226,96,96,0.15)" : "transparent", flex: isMobile ? 1 : "none" }}>
+                    {deleteConfirmId === selectedWorker.id ? "⚠️ Confirm Remove?" : "🗑 Remove"}
                   </button>
                 </div>
               </div>
