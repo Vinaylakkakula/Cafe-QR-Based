@@ -90,6 +90,37 @@ function App({ authUser, onLogout }) {
   // Simple flag to skip one push cycle after a sync pull updates local state
   const skipNextPushRef = React.useRef(false);
 
+  // Wrappers to intercept state changes caused by local actions (mutations)
+  // and set lastPushTimeRef.current immediately to block sync overwrite race conditions.
+  const mutateTables = React.useCallback((updater) => {
+    lastPushTimeRef.current = Date.now();
+    setTables(updater);
+  }, []);
+  const mutateMenuItems = React.useCallback((updater) => {
+    lastPushTimeRef.current = Date.now();
+    setMenuItems(updater);
+  }, []);
+  const mutateCategories = React.useCallback((updater) => {
+    lastPushTimeRef.current = Date.now();
+    setCategories(updater);
+  }, []);
+  const mutateOrders = React.useCallback((updater) => {
+    lastPushTimeRef.current = Date.now();
+    setOrders(updater);
+  }, []);
+  const mutateReservations = React.useCallback((updater) => {
+    lastPushTimeRef.current = Date.now();
+    setReservations(updater);
+  }, []);
+  const mutateCustomers = React.useCallback((updater) => {
+    lastPushTimeRef.current = Date.now();
+    setCustomers(updater);
+  }, []);
+  const mutateStaff = React.useCallback((updater) => {
+    lastPushTimeRef.current = Date.now();
+    setStaff(updater);
+  }, []);
+
   React.useEffect(() => {
     if (prevTablesRef.current && prevTablesRef.current.length > 0) {
       tables.forEach(table => {
@@ -366,6 +397,10 @@ function App({ authUser, onLogout }) {
     try {
       const dbState = await window.fetchSupabaseState();
       if (dbState) {
+        // Double check after fetch resolves to avoid race conditions with local mutations
+        if (Date.now() - lastPushTimeRef.current < throttleLimit) {
+          return;
+        }
         let hasChanges = false;
         
         let nextSettings = settingsRef.current;
@@ -587,7 +622,7 @@ function App({ authUser, onLogout }) {
 
   const selectedTable = tables.find(t => t.id === selectedId) || null;
   const pushEvent = (text, val) => setEvents(prev => [{ ts: Date.now(), text, val }, ...prev].slice(0, 40));
-  const updateTable = (u) => setTables(prev => prev.map(t => t.id === u.id ? u : t));
+  const updateTable = (u) => mutateTables(prev => prev.map(t => t.id === u.id ? u : t));
   const selectTable = (table) => {
     setSelectedId(table.id);
     if (table.status === "available") updateTable({ ...table, status: "occupied" });
@@ -626,7 +661,7 @@ function App({ authUser, onLogout }) {
   // QR order integration
   const { pendingQROrder: qrPending, acceptOrder: qrAccept, dismissOrder: qrDismiss } =
     (window.useQROrders || (() => ({ pendingQROrder: null, acceptOrder: ()=>{}, dismissOrder: ()=>{} })))
-    ({ tables, setTables, showToast, currency: settings.currency, setModal });
+    ({ tables, setTables: mutateTables, showToast, currency: settings.currency, setModal, setSelectedId });
   const saveDraft = () => { showToast("Order saved as draft"); pushEvent(`Draft saved · T${selectedTable.num}`); };
 
   const confirmPayment = (paymentRecord) => {
@@ -668,7 +703,7 @@ function App({ authUser, onLogout }) {
   const getTableTotal = (table) => table.splits.reduce((s, split) => s + computeSplitTotals(split, settings).grand, 0);
 
   const handleResetTables = (count) => {
-    setTables(prev => {
+    mutateTables(prev => {
       const current = prev.filter(t => t.id !== "takeaway");
       if (count > current.length) {
         const caps = [2,2,4,4,4,6,6,8];
@@ -904,11 +939,11 @@ function App({ authUser, onLogout }) {
         ) : (
           <div className="workspace" style={{flex:1, minHeight:0, background:'var(--bg)'}}>
             <div className="workspace-inner" style={{maxWidth: 1200, margin:'0 auto', width:'100%'}}>
-              {view === "reservations" && <ReservationsView reservations={reservations} tables={tables} onCheckIn={seatReservation} onCancel={(r) => { setReservations(prev => prev.map(x => x.id === r.id ? {...x, status:"cancelled"} : x)); showToast("Reservation cancelled"); }} onAdd={() => setModal({ type: "new-res" })}/>}
+              {view === "reservations" && <ReservationsView reservations={reservations} tables={tables} onCheckIn={seatReservation} onCancel={(r) => { mutateReservations(prev => prev.map(x => x.id === r.id ? {...x, status:"cancelled"} : x)); showToast("Reservation cancelled"); }} onAdd={() => setModal({ type: "new-res" })}/>}
               {view === "customers" && <CustomersView customers={customers} onAdd={() => setModal({ type: "new-customer" })}/>}
               {view === "kitchen" && <KitchenDisplay tables={tables} onUpdateTable={updateTable} settings={settings} showToast={showToast}/>}
-              {view === "staff" && window.StaffView && <window.StaffView staff={staff} setStaff={setStaff} showToast={showToast}/>}
-              {view === "admin" && <AdminPanel menuItems={menuItems} setMenuItems={setMenuItems} categories={categories} setCategories={setCategories} orders={orders} settings={settings} showToast={showToast} tables={tables}/>}
+              {view === "staff" && window.StaffView && <window.StaffView staff={staff} setStaff={mutateStaff} showToast={showToast}/>}
+              {view === "admin" && <AdminPanel menuItems={menuItems} setMenuItems={mutateMenuItems} categories={categories} setCategories={mutateCategories} orders={orders} settings={settings} showToast={showToast} tables={tables}/>}
               {view === "history" && <HistoryView orders={orders} settings={settings} onReprint={(o) => setModal({ type: "receipt", order: o })}/>}
               {view === "summary" && <SummaryView orders={orders} settings={settings}/>}
               {view === "settings" && <SettingsView settings={settings} onChange={setSettings} onResetTables={handleResetTables}/>}
@@ -950,8 +985,8 @@ function App({ authUser, onLogout }) {
       {modal?.type === "checkout" && selectedTable && <CheckoutModal table={selectedTable} split={selectedTable.splits[selectedTable.activeSplit]} totals={computeSplitTotals(selectedTable.splits[selectedTable.activeSplit], settings)} settings={settings} onClose={() => setModal(null)} onConfirm={(rec) => { setModal(null); confirmPayment(rec); }}/>}
       {modal?.type === "receipt" && <ReceiptModal order={modal.order} settings={settings} onClose={() => setModal(null)}/>}
       {modal?.type === "waiter" && <WaiterModal table={modal.table} staff={staff} onClose={() => setModal(null)} onAssign={(name) => assignWaiter(modal.table, name)}/>}
-      {modal?.type === "new-res" && <NewReservationModal tables={tables} onClose={() => setModal(null)} onSave={(r) => { setReservations(prev => [...prev, r]); setModal(null); showToast(`Reservation saved for ${r.name}`); }}/>}
-      {modal?.type === "new-customer" && <NewCustomerModal onClose={() => setModal(null)} onSave={(c) => { setCustomers(prev => [...prev, c]); setModal(null); showToast(`${c.name} added`); }}/>}
+      {modal?.type === "new-res" && <NewReservationModal tables={tables} onClose={() => setModal(null)} onSave={(r) => { mutateReservations(prev => [...prev, r]); setModal(null); showToast(`Reservation saved for ${r.name}`); }}/>}
+      {modal?.type === "new-customer" && <NewCustomerModal onClose={() => setModal(null)} onSave={(c) => { mutateCustomers(prev => [...prev, c]); setModal(null); showToast(`${c.name} added`); }}/>}
       {modal?.type === "qr" && window.QRCodeModal && React.createElement(window.QRCodeModal, { tableNum: modal.tableNum, baseUrl: window.location.href.replace(/[^/]*$/, ""), onClose: () => setModal(null) })}
       {qrPending && window.QROrderBanner && React.createElement(window.QROrderBanner, { order: qrPending, currency: settings.currency, onAccept: qrAccept, onDismiss: qrDismiss })}
       {modal?.type === "change-password" && window._authUtils?.ChangePasswordModal && (

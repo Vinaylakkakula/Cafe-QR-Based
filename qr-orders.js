@@ -138,7 +138,7 @@ function playNotificationSound() {
 }
 
 // ── QR Order Watcher Hook ─────────────────────────────────────────────────
-function useQROrders({ tables, setTables, showToast, currency, setModal }) {
+function useQROrders({ tables, setTables, showToast, currency, setModal, setSelectedId }) {
   const [pendingQROrder, setPendingQROrder] = React.useState(null);
 
   React.useEffect(() => {
@@ -387,6 +387,7 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
     }
 
     showToast(`QR Order #${o.id} added to Table ${o.tableNum}`);
+    if (setSelectedId) setSelectedId(targetTable.id);
     // Auto-open KOT modal for this table
     setModal({ type: "kot", tableId: targetTable.id });
     setPendingQROrder(null);
