@@ -395,13 +395,14 @@ function App({ authUser, onLogout }) {
                   return localTable;
                 }
                 
-                // If remote table was checked out (marked available), accept the clear
-                if (t.status === "available" && localTable.status !== "available") {
-                  return t;
-                }
+                // Always preserve local status — it is fresher since the 6-second
+                // push debounce guarantees our push has landed before we pull.
+                // This prevents right-click status changes from being overwritten.
+                const localStatus = localTable.status;
+                const remoteStatus = t.status;
                 
                 // If local status is occupied and remote is occupied, merge splits based on progress
-                if (t.status === "occupied" && localTable.status === "occupied") {
+                if (remoteStatus === "occupied" && localStatus === "occupied") {
                   const mergedSplits = mergeSplits(localTable.splits, t.splits);
                   return {
                     ...t,
@@ -411,11 +412,18 @@ function App({ authUser, onLogout }) {
                   };
                 }
                 
-                // Fallback: Preserve local selected table edits
-                if (selectedId && t.id === selectedId) {
+                // For any status difference, trust the local state
+                // (right-click changes, checkout clears, etc.)
+                if (localStatus !== remoteStatus) {
                   return localTable;
                 }
-                return t;
+                
+                // Statuses match and not both occupied — accept remote data
+                // but preserve local waiter if set
+                return {
+                  ...t,
+                  waiter: localTable.waiter || t.waiter || "",
+                };
               });
 
               if (JSON.stringify(prev) !== JSON.stringify(merged)) {

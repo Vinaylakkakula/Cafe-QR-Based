@@ -325,6 +325,24 @@
   .osc-item-name { color: var(--text); }
   .osc-item-right { color: var(--text-dim); font-family: 'Courier New', monospace; }
 
+  /* Modification panel styles */
+  .mod-btn {
+    flex: 1;
+    background: transparent; border: 1.5px solid var(--amber);
+    color: var(--amber-bright); border-radius: 10px;
+    padding: 10px 14px; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .mod-btn:hover { background: var(--amber-soft); }
+  .cancel-btn {
+    flex: 1;
+    background: transparent; border: 1.5px solid var(--red);
+    color: var(--red); border-radius: 10px;
+    padding: 10px 14px; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+  }
+  .cancel-btn:hover { background: rgba(226, 96, 96, 0.12); }
+
   /* Empty state */
   .empty { padding: 60px 20px; text-align: center; color: var(--text-muted); }
   .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.4; }
@@ -403,6 +421,15 @@
     <div class="osc-head">Your Order</div>
     <div id="successItems"></div>
   </div>
+  <div id="modificationPanel" style="margin-bottom: 24px; text-align: center; width: 100%; max-width: 360px; background: var(--bg1); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: none;">
+    <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+      ⏳ Modify/Cancel window: <span id="timerCountdown" style="color: var(--amber-bright); font-weight: 700;">60s</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button class="mod-btn" id="modifyOrderBtn" onclick="modifyPlacedOrder()">Modify Order</button>
+      <button class="cancel-btn" id="cancelOrderBtn" onclick="cancelPlacedOrder()">Cancel Order</button>
+    </div>
+  </div>
   <p style="font-size:12px;color:var(--text-muted)">Want to add more? <a href="#" onclick="resetForMoreOrdering()" style="color:var(--amber)">Continue ordering</a></p>
 </div>
 
@@ -453,6 +480,8 @@ let menuItems = [];
 let categories = [];
 let cart = []; // [{ id, name, price, qty, note, veg, img }]
 let restaurantName = "MAHA FAST FOOD COURT";
+let lastPlacedOrder = null;
+let countdownInterval = null;
 
 // ── Supabase client for customer page ──────────────────────────────────────
 let customerSupabase = null;
@@ -872,6 +901,124 @@ function showSuccessScreen(order) {
     </div>`;
   cart = [];
   updateCartUI();
+
+  // Start modification window timer
+  startModificationCountdown(order);
+}
+
+function startModificationCountdown(order) {
+  lastPlacedOrder = order;
+  const panel = document.getElementById("modificationPanel");
+  if (panel) panel.style.display = "block";
+
+  const timer = document.getElementById("timerCountdown");
+  if (timer) timer.textContent = "60s";
+
+  let timeLeft = 60;
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  countdownInterval = setInterval(() => {
+    timeLeft--;
+    if (timer) timer.textContent = `${timeLeft}s`;
+    
+    if (timeLeft <= 0) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+      if (panel) panel.style.display = "none";
+    }
+  }, 1000);
+}
+
+async function modifyPlacedOrder() {
+  if (!lastPlacedOrder) return;
+  
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  
+  const order = lastPlacedOrder;
+  
+  // 1. Update status to 'modified' in local storage
+  try {
+    const raw = localStorage.getItem(QR_ORDERS_KEY);
+    if (raw) {
+      const orders = JSON.parse(raw);
+      const idx = orders.findIndex(o => o.id === order.id);
+      if (idx >= 0) {
+        orders[idx].status = "modified";
+        localStorage.setItem(QR_ORDERS_KEY, JSON.stringify(orders));
+      }
+    }
+  } catch (e) {}
+  
+  // 2. Update status to 'modified' in Supabase
+  if (customerSupabase) {
+    try {
+      await customerSupabase.from("pos_qr_orders")
+        .update({ status: "modified" })
+        .eq("id", order.id);
+    } catch (e) {
+      console.error("Failed to mark order as modified in Supabase:", e);
+    }
+  }
+  
+  // 3. Restore cart
+  cart = JSON.parse(JSON.stringify(order.items));
+  updateCartUI();
+  
+  // 4. Close success screen, go back to main app and open cart drawer
+  document.getElementById("successScreen").classList.remove("show");
+  document.getElementById("mainApp").style.display = "block";
+  openCart();
+  
+  showToast("Restored items to cart. Make your changes and send again!");
+}
+
+async function cancelPlacedOrder() {
+  if (!lastPlacedOrder) return;
+  
+  if (!confirm("Are you sure you want to cancel this order?")) return;
+  
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+  
+  const order = lastPlacedOrder;
+  
+  // 1. Update status to 'cancelled' in local storage
+  try {
+    const raw = localStorage.getItem(QR_ORDERS_KEY);
+    if (raw) {
+      const orders = JSON.parse(raw);
+      const idx = orders.findIndex(o => o.id === order.id);
+      if (idx >= 0) {
+        orders[idx].status = "cancelled";
+        localStorage.setItem(QR_ORDERS_KEY, JSON.stringify(orders));
+      }
+    }
+  } catch (e) {}
+  
+  // 2. Update status to 'cancelled' in Supabase
+  if (customerSupabase) {
+    try {
+      await customerSupabase.from("pos_qr_orders")
+        .update({ status: "cancelled" })
+        .eq("id", order.id);
+    } catch (e) {
+      console.error("Failed to mark order as cancelled in Supabase:", e);
+    }
+  }
+  
+  // 3. Close success screen and reset
+  document.getElementById("successScreen").classList.remove("show");
+  document.getElementById("mainApp").style.display = "block";
+  cart = [];
+  updateCartUI();
+  renderMenu();
+  
+  showToast("Your order was successfully cancelled.");
 }
 
 function resetForMoreOrdering() {

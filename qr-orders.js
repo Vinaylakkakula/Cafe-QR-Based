@@ -184,6 +184,46 @@ function useQROrders({ tables, setTables, showToast, currency, setModal }) {
   }, [pendingQROrder]);
 
   React.useEffect(() => {
+    if (!pendingQROrder) return;
+
+    const checkStatus = async () => {
+      // 1. Check local storage first
+      try {
+        const raw = localStorage.getItem(QR_ORDERS_KEY);
+        if (raw) {
+          const orders = JSON.parse(raw);
+          const current = orders.find(o => o.id === pendingQROrder.id);
+          if (current && current.status !== "pending") {
+            showToast(`QR Order #${pendingQROrder.id} was ${current.status} by customer`);
+            setPendingQROrder(null);
+            return;
+          }
+        }
+      } catch {}
+
+      // 2. Check Supabase
+      if (window.supabaseClient) {
+        try {
+          const { data, error } = await window.supabaseClient
+            .from("pos_qr_orders")
+            .select("status")
+            .eq("id", pendingQROrder.id)
+            .maybeSingle();
+          if (data && data.status !== "pending") {
+            showToast(`QR Order #${pendingQROrder.id} was ${data.status} by customer`);
+            setPendingQROrder(null);
+          }
+        } catch (e) {
+          console.error("Failed to check pending order status:", e);
+        }
+      }
+    };
+
+    const statusInterval = setInterval(checkStatus, 1500);
+    return () => clearInterval(statusInterval);
+  }, [pendingQROrder]);
+
+  React.useEffect(() => {
     const seen = () => {
       try { return new Set(JSON.parse(localStorage.getItem(QR_SEEN_KEY) || "[]")); }
       catch { return new Set(); }
