@@ -575,46 +575,85 @@ function App({ authUser, onLogout }) {
 
   // Generate notifications from state
   React.useEffect(() => {
-    const existingKeys = new Set(notifications.map(n => n.key));
-    const newOnes = [];
-    menuItems.filter(i => i.available && i.stock <= 5).forEach(i => {
-      const key = `low-${i.id}`;
-      if (!existingKeys.has(key)) {
-        const isCritical = i.stock < 4;
-        newOnes.push({ 
-          id: uid("n"), 
-          key, 
-          level: isCritical ? "error" : "warn", 
-          title: isCritical ? "Critical low stock" : "Low stock", 
-          msg: `${i.name} only ${i.stock} left`, 
-          ts: Date.now(), 
-          read: false 
-        });
+    const validLowStockIds = new Set(menuItems.filter(i => i.available && i.stock <= 5).map(i => i.id));
+    const validResIds = new Set(reservations.filter(r => r.status === "confirmed" && r.ts - Date.now() < 30*60*1000 && r.ts - Date.now() > 0).map(r => r.id));
+
+    setNotifications(prev => {
+      // 1. Clean up stale/old notifications:
+      // - low stock for items that are no longer low stock, unavailable, or deleted
+      // - arriving soon for reservations that are checked-in, cancelled, or passed
+      let cleaned = prev.filter(n => {
+        if (n.key && n.key.startsWith("low-")) {
+          const itemId = n.key.replace("low-", "");
+          return validLowStockIds.has(itemId);
+        }
+        if (n.key && n.key.startsWith("res-")) {
+          const resId = n.key.replace("res-", "");
+          return validResIds.has(resId);
+        }
+        return true;
+      });
+
+      // 2. Add new ones
+      const existingKeys = new Set(cleaned.map(n => n.key));
+      const newOnes = [];
+      
+      menuItems.filter(i => i.available && i.stock <= 5).forEach(i => {
+        const key = `low-${i.id}`;
+        if (!existingKeys.has(key)) {
+          const isCritical = i.stock < 4;
+          newOnes.push({ 
+            id: uid("n"), 
+            key, 
+            level: isCritical ? "error" : "warn", 
+            title: isCritical ? "Critical low stock" : "Low stock", 
+            msg: `${i.name} only ${i.stock} left`, 
+            ts: Date.now(), 
+            read: false 
+          });
+        }
+      });
+      
+      reservations.filter(r => r.status === "confirmed" && r.ts - Date.now() < 30*60*1000 && r.ts - Date.now() > 0).forEach(r => {
+        const key = `res-${r.id}`;
+        if (!existingKeys.has(key)) {
+          newOnes.push({ 
+            id: uid("n"), 
+            key, 
+            level: "info", 
+            title: `${r.name} arriving soon`, 
+            msg: `Party of ${r.party} · ${formatTime(new Date(r.ts))}`, 
+            ts: Date.now(), 
+            read: false 
+          });
+        }
+      });
+
+      if (newOnes.length > 0) {
+        if ("Notification" in window && Notification.permission === "granted") {
+          newOnes.forEach(n => {
+            try {
+              const notif = new Notification(`🔔 ${n.title}`, {
+                body: n.msg,
+                requireInteraction: false
+              });
+              notif.onclick = () => {
+                window.focus();
+                notif.close();
+              };
+            } catch (e) {
+              console.warn("Native Notification failed:", e);
+            }
+          });
+        }
+        return [...newOnes, ...cleaned].slice(0, 20);
       }
-    });
-    reservations.filter(r => r.status === "confirmed" && r.ts - Date.now() < 30*60*1000 && r.ts - Date.now() > 0).forEach(r => {
-      const key = `res-${r.id}`;
-      if (!existingKeys.has(key)) newOnes.push({ id: uid("n"), key, level: "info", title: `${r.name} arriving soon`, msg: `Party of ${r.party} · ${formatTime(new Date(r.ts))}`, ts: Date.now(), read: false });
-    });
-    if (newOnes.length) {
-      setNotifications(prev => [...newOnes, ...prev].slice(0, 20));
-      if ("Notification" in window && Notification.permission === "granted") {
-        newOnes.forEach(n => {
-          try {
-            const notif = new Notification(`🔔 ${n.title}`, {
-              body: n.msg,
-              requireInteraction: false
-            });
-            notif.onclick = () => {
-              window.focus();
-              notif.close();
-            };
-          } catch (e) {
-            console.warn("Native Notification failed:", e);
-          }
-        });
+      
+      if (cleaned.length !== prev.length) {
+        return cleaned;
       }
-    }
+      return prev;
+    });
   }, [menuItems, reservations]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -627,7 +666,22 @@ function App({ authUser, onLogout }) {
     setSelectedId(table.id);
     if (table.status === "available") updateTable({ ...table, status: "occupied" });
   };
-  const setStatus = (table, status) => { updateTable({ ...table, status }); showToast(`T${table.num} marked ${status}`); pushEvent(`T${table.num} → ${status}`); };
+  const setStatus = (table, status) => {
+    const updatedTable = { ...table, status };
+    if (status === "available") {
+      updatedTable.waiter = "";
+      updatedTable.splits = [window.createSplit ? window.createSplit() : { label: "Main", items: [], courseStage: "new" }];
+      updatedTable.activeSplit = 0;
+    }
+    updateTable(updatedTable);
+    if (status === "available" || status === "reserved") {
+      if (selectedId === table.id) {
+        setSelectedId(null);
+      }
+    }
+    showToast(`T${table.num} marked ${status}`);
+    pushEvent(`T${table.num} → ${status}`);
+  };
   const assignWaiter = (table, name) => { updateTable({ ...table, waiter: name }); showToast(`Waiter assigned: ${name || "—"}`); };
   const markOrderServed = (table) => {
     const currentSplit = table.splits?.[table.activeSplit];
@@ -844,7 +898,7 @@ function App({ authUser, onLogout }) {
                 <Icon name="clock" size={16}/>
                 {unreadCount > 0 && <span className="badge-dot"/>}
               </button>
-              {showNotif && <NotificationsPanel items={notifications} onClose={() => setShowNotif(false)} onMarkRead={() => setNotifications(prev => prev.map(n => ({...n, read:true})))}/>}
+              {showNotif && <NotificationsPanel items={notifications} onClose={() => setShowNotif(false)} onMarkRead={() => setNotifications(prev => prev.map(n => ({...n, read:true})))} onClear={() => setNotifications([])}/>}
             </div>
             <div className="shift-badge"><span className="dot"/>{getShift(now)}</div>
             <div className="clock">
@@ -987,7 +1041,7 @@ function App({ authUser, onLogout }) {
       {modal?.type === "waiter" && <WaiterModal table={modal.table} staff={staff} onClose={() => setModal(null)} onAssign={(name) => assignWaiter(modal.table, name)}/>}
       {modal?.type === "new-res" && <NewReservationModal tables={tables} onClose={() => setModal(null)} onSave={(r) => { mutateReservations(prev => [...prev, r]); setModal(null); showToast(`Reservation saved for ${r.name}`); }}/>}
       {modal?.type === "new-customer" && <NewCustomerModal onClose={() => setModal(null)} onSave={(c) => { mutateCustomers(prev => [...prev, c]); setModal(null); showToast(`${c.name} added`); }}/>}
-      {modal?.type === "qr" && window.QRCodeModal && React.createElement(window.QRCodeModal, { tableNum: modal.tableNum, baseUrl: window.location.href.replace(/[^/]*$/, ""), onClose: () => setModal(null) })}
+      {modal?.type === "qr" && window.QRCodeModal && React.createElement(window.QRCodeModal, { tableNum: modal.tableNum, baseUrl: settings.qrBaseUrl || window.location.href.replace(/[^/]*$/, ""), onClose: () => setModal(null) })}
       {qrPending && window.QROrderBanner && React.createElement(window.QROrderBanner, { order: qrPending, currency: settings.currency, onAccept: qrAccept, onDismiss: qrDismiss })}
       {modal?.type === "change-password" && window._authUtils?.ChangePasswordModal && (
         <window._authUtils.ChangePasswordModal authUser={authUser} onClose={() => setModal(null)} showToast={showToast}/>

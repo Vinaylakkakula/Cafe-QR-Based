@@ -232,19 +232,36 @@ async function pushStateToSupabase(state) {
     }
     
     // Sync Menu Items
-    if (menuItems && menuItems.length > 0) {
-      const dbMenu = menuItems.map(m => ({
-        id: m.id,
-        cat: m.cat,
-        name: m.name,
-        desc_text: m.desc || null,
-        price: m.price,
-        veg: m.veg,
-        available: m.available,
-        stock: m.stock,
-        img: m.img || null
-      }));
-      await supabaseClient.from("pos_menu").upsert(dbMenu);
+    if (menuItems) {
+      if (menuItems.length > 0) {
+        const dbMenu = menuItems.map(m => ({
+          id: m.id,
+          cat: m.cat,
+          name: m.name,
+          desc_text: m.desc || null,
+          price: m.price,
+          veg: m.veg,
+          available: m.available,
+          stock: m.stock,
+          img: m.img || null
+        }));
+        await supabaseClient.from("pos_menu").upsert(dbMenu);
+      }
+      
+      // Clean up deleted (orphaned) menu items in Supabase
+      try {
+        const currentIds = menuItems.map(m => m.id);
+        const { data: remoteMenu } = await supabaseClient.from("pos_menu").select("id");
+        if (remoteMenu) {
+          const orphanIds = remoteMenu.map(r => r.id).filter(id => !currentIds.includes(id));
+          if (orphanIds.length > 0) {
+            await supabaseClient.from("pos_menu").delete().in("id", orphanIds);
+            console.log("Deleted orphaned menu items from Supabase:", orphanIds);
+          }
+        }
+      } catch (delErr) {
+        console.warn("Failed to clean up orphaned menu items:", delErr);
+      }
     }
     
     // Sync Orders

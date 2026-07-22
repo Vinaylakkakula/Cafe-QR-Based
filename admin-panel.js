@@ -810,7 +810,7 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
                     <div class="grid" id="qr-grid"></div>
                     <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
                     <script>
-                      const baseUrl = window.location.href.replace(/[^/]*$/, "").replace("about:blank", window.opener.location.href.replace(/[^/]*$/, ""));
+                      const baseUrl = ${settings.qrBaseUrl ? JSON.stringify(settings.qrBaseUrl) : 'window.location.href.replace(/[^/]*$/, "").replace("about:blank", window.opener.location.href.replace(/[^/]*$/, ""))'};
                       const tables = ${JSON.stringify(tables)};
                       const grid = document.getElementById("qr-grid");
                       
@@ -1054,7 +1054,7 @@ const AdminPanel = ({ menuItems, setMenuItems, categories, setCategories, orders
 const TableQRCard = ({ tableNum, settings }) => {
   const canvasRef = React.useRef(null);
   const [qrLoaded, setQrLoaded] = React.useState(!!window.QRCode);
-  const baseUrl = window.location.href.replace(/[^/]*$/, "");
+  const baseUrl = settings.qrBaseUrl || window.location.href.replace(/[^/]*$/, "");
   const orderUrl = `${baseUrl}customer-order.html?table=${tableNum}`;
 
   React.useEffect(() => {

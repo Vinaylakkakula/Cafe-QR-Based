@@ -104,7 +104,7 @@ const CustomersView = ({ customers, onAdd }) => {
   );
 };
 
-const NotificationsPanel = ({ items, onClose, onMarkRead }) => {
+const NotificationsPanel = ({ items, onClose, onMarkRead, onClear }) => {
   const ref = React.useRef();
   React.useEffect(() => {
     const close = (e) => { if (!ref.current?.contains(e.target)) onClose(); };
@@ -115,14 +115,16 @@ const NotificationsPanel = ({ items, onClose, onMarkRead }) => {
     <div ref={ref} className="notif-panel">
       <div className="notif-head">
         <h3>Notifications</h3>
-        <button className="btn-ghost" style={{fontSize:11, padding:'4px 8px'}} onClick={onMarkRead}>Mark all read</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn-ghost" style={{fontSize:11, padding:'4px 8px'}} onClick={onMarkRead}>Mark all read</button>
+          {onClear && <button className="btn-ghost" style={{fontSize:11, padding:'4px 8px', color:'var(--red)'}} onClick={onClear}>Clear all</button>}
+        </div>
       </div>
       <div className="notif-list">
         {items.length === 0 ? (
           <div style={{padding:'32px 20px', textAlign:'center', color:'var(--text-muted)', fontSize:12}}>All caught up ✓</div>
         ) : items.map(n => (
           <div key={n.id} className={`notif-item ${n.read ? "read" : "unread"}`}>
-            <span/>
             <div className={`notif-icon ${n.level}`}>
               <Icon name={n.level === "warn" ? "chef" : n.level === "ok" ? "check" : "users"} size={13}/>
             </div>

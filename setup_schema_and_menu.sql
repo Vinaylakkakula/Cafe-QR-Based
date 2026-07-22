@@ -110,7 +110,8 @@ INSERT INTO pos_settings (id, data) VALUES ('global', '{
   "logoUrl": "",
   "receiptHeader": "Thank you for dining with us!",
   "receiptFooter": "Follow us on Instagram @mahafastfoodcourt",
-  "qrNotificationSound": "loud"
+  "qrNotificationSound": "loud",
+  "qrBaseUrl": "https://darbarstreet.vercel.app/"
 }'::jsonb) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data;
 
 -- Insert default Tables (1 to 10 + Takeaway)

@@ -746,6 +746,9 @@ input, select, textarea { font-family: inherit; }
   aspect-ratio: 1.15;
   display: flex; flex-direction: column; justify-content: space-between;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .table-card:hover { border-color: var(--line-2); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 .table-card.selected {
@@ -1235,13 +1238,14 @@ input, select, textarea { font-family: inherit; }
   padding: 10px 16px; border-bottom: 1px solid var(--line);
   display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: flex-start;
   cursor: pointer;
+  position: relative;
 }
 .notif-item:hover { background: var(--bg-3); }
 .notif-item.unread::before {
   content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--amber);
-  display: block; margin-top: 6px;
+  position: absolute; left: 5px; top: 20px;
 }
-.notif-item.read::before { content: ''; display: block; }
+.notif-item.read::before { display: none; }
 .notif-icon { width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; }
 .notif-icon.warn { background: rgba(226,96,96,.12); color: var(--red); }
 .notif-icon.info { background: rgba(103,162,217,.12); color: var(--blue); }

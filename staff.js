@@ -365,6 +365,17 @@ const StaffView = ({ staff, setStaff, showToast }) => {
   );
 };
 
+// React Portal to escape parent container clips
+const Portal = ({ children }) => {
+  const el = React.useRef(document.createElement('div'));
+  React.useEffect(() => {
+    const container = el.current;
+    document.body.appendChild(container);
+    return () => { document.body.removeChild(container); };
+  }, []);
+  return ReactDOM.createPortal(children, el.current);
+};
+
 // Form Modal Component for Add/Edit
 const StaffFormModal = ({ type, data, onClose, onSave }) => {
   const [form, setForm] = React.useState({
@@ -377,69 +388,71 @@ const StaffFormModal = ({ type, data, onClose, onSave }) => {
   });
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" style={{ width: 350 }} onClick={e => e.stopPropagation()}>
-        <div className="modal-head">
-          <div>
-            <div className="modal-title">{type === "add" ? "Add Staff Member" : "Edit Staff Details"}</div>
-            <div className="modal-sub">Enter team member work details</div>
+    <Portal>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal" style={{ width: 350 }} onClick={e => e.stopPropagation()}>
+          <div className="modal-head">
+            <div>
+              <div className="modal-title">{type === "add" ? "Add Staff Member" : "Edit Staff Details"}</div>
+              <div className="modal-sub">Enter team member work details</div>
+            </div>
+            <button className="modal-close" onClick={onClose}>✕</button>
           </div>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
-        <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Full Name</label>
-            <input 
-              type="text" 
-              value={form.name} 
-              onChange={e => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. John Doe"
-              style={{ width: "100%", padding: "10px", marginTop: 4, background: "var(--bg-3)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }}
-            />
-          </div>
+          <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Full Name</label>
+              <input 
+                type="text" 
+                value={form.name} 
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                placeholder="e.g. John Doe"
+                style={{ width: "100%", padding: "10px", marginTop: 4, background: "var(--bg-3)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }}
+              />
+            </div>
 
-          <div>
-            <label style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Designation / Role</label>
-            <select 
-              value={form.role} 
-              onChange={e => setForm({ ...form, role: e.target.value })}
-              style={{ width: "100%", padding: "10px", marginTop: 4, background: "var(--bg-3)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }}
-            >
-              <option value="Manager">Manager</option>
-              <option value="Chef">Chef</option>
-              <option value="Kitchen Helper">Kitchen Helper</option>
-              <option value="Waitstaff">Waitstaff</option>
-              <option value="Cashier">Cashier</option>
-              <option value="Cleaner">Cleaner</option>
-            </select>
-          </div>
+            <div>
+              <label style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Designation / Role</label>
+              <select 
+                value={form.role} 
+                onChange={e => setForm({ ...form, role: e.target.value })}
+                style={{ width: "100%", padding: "10px", marginTop: 4, background: "var(--bg-3)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }}
+              >
+                <option value="Manager">Manager</option>
+                <option value="Chef">Chef</option>
+                <option value="Kitchen Helper">Kitchen Helper</option>
+                <option value="Waitstaff">Waitstaff</option>
+                <option value="Cashier">Cashier</option>
+                <option value="Cleaner">Cleaner</option>
+              </select>
+            </div>
 
-          <div>
-            <label style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Monthly Salary (₹)</label>
-            <input 
-              type="number" 
-              value={form.salary} 
-              onChange={e => setForm({ ...form, salary: parseFloat(e.target.value) || 0 })}
-              style={{ width: "100%", padding: "10px", marginTop: 4, background: "var(--bg-3)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }}
-            />
-          </div>
+            <div>
+              <label style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Monthly Salary (₹)</label>
+              <input 
+                type="number" 
+                value={form.salary} 
+                onChange={e => setForm({ ...form, salary: parseFloat(e.target.value) || 0 })}
+                style={{ width: "100%", padding: "10px", marginTop: 4, background: "var(--bg-3)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }}
+              />
+            </div>
 
-          <div>
-            <label style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Date of Joining</label>
-            <input 
-              type="date" 
-              value={form.joined} 
-              onChange={e => setForm({ ...form, joined: e.target.value })}
-              style={{ width: "100%", padding: "10px", marginTop: 4, background: "var(--bg-3)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }}
-            />
+            <div>
+              <label style={{ fontSize: 11, color: "var(--text-dim)", textTransform: "uppercase", fontWeight: 600 }}>Date of Joining</label>
+              <input 
+                type="date" 
+                value={form.joined} 
+                onChange={e => setForm({ ...form, joined: e.target.value })}
+                style={{ width: "100%", padding: "10px", marginTop: 4, background: "var(--bg-3)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--text)" }}
+              />
+            </div>
           </div>
-        </div>
-        <div className="modal-foot">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={() => onSave(form)}>Save Details</button>
+          <div className="modal-foot">
+            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" onClick={() => onSave(form)}>Save Details</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 };
 

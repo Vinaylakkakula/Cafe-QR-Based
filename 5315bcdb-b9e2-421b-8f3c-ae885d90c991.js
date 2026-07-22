@@ -38,12 +38,70 @@ const TableCard = ({ table, selected, onClick, onContextMenu, totals, currency, 
     }
   }, []);
 
+  // Long press handling on mobile
+  const pressTimer = React.useRef(null);
+  const isLongPress = React.useRef(false);
+  const touchStartPos = React.useRef({ x: 0, y: 0 });
+
+  const handleTouchStart = (e) => {
+    isLongPress.current = false;
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    
+    pressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      // Trigger context menu
+      const rect = e.currentTarget.getBoundingClientRect();
+      const fakeEvent = {
+        preventDefault: () => {},
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2
+      };
+      onContextMenu(fakeEvent, table);
+    }, 600); // 600ms of touch hold triggers context menu
+  };
+
+  const handleTouchMove = (e) => {
+    if (pressTimer.current) {
+      const touch = e.touches[0];
+      const diffX = Math.abs(touch.clientX - touchStartPos.current.x);
+      const diffY = Math.abs(touch.clientY - touchStartPos.current.y);
+      // Cancel long press timer if finger moves (scrolls) more than 8 pixels
+      if (diffX > 8 || diffY > 8) {
+        clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+      }
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+    if (isLongPress.current) {
+      e.preventDefault(); // Stop click from being fired on touch release
+      setTimeout(() => { isLongPress.current = false; }, 50);
+    }
+  };
+
+  const handleCardClick = (e) => {
+    if (isLongPress.current) {
+      e.preventDefault();
+      return;
+    }
+    onClick(table);
+  };
+
   return (
     <div
       className={`table-card ${table.status} ${selected ? "selected" : ""} ${isReady ? "ready" : ""} ${isPreparing ? "preparing" : ""}`}
       style={cardStyle}
-      onClick={() => onClick(table)}
+      onClick={handleCardClick}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, table); }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       <div className="table-top">
         <div>

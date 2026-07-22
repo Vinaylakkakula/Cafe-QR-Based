@@ -416,6 +416,13 @@ const SettingsView = ({ settings, onChange, onResetTables }) => {
             <input value={settings.logoUrl || ""} onChange={(e) => upd({ logoUrl: e.target.value })} placeholder="e.g. https://domain.com/logo.png"/>
           </div>
           <div className="setting-field full">
+            <label>Customer Ordering Base URL (Vercel URL)</label>
+            <input value={settings.qrBaseUrl || ""} onChange={(e) => upd({ qrBaseUrl: e.target.value })} placeholder="e.g. https://vinaycafe.vercel.app/ (Leave blank to use current browser URL)"/>
+            <p style={{fontSize:11, color:'var(--text-muted)', marginTop:4}}>
+              Specify the public URL where your <code>customer-order.html</code> is hosted (like Vercel). If left blank, it defaults to the current browser URL.
+            </p>
+          </div>
+          <div className="setting-field full">
             <label>Receipt Custom Header Note</label>
             <input value={settings.receiptHeader || ""} onChange={(e) => upd({ receiptHeader: e.target.value })} placeholder="e.g. Thank you for dining with us!"/>
           </div>
