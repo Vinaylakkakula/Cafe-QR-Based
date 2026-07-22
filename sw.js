@@ -1,5 +1,5 @@
 // ── Service Worker for MAHA FAST FOOD COURT PWA ──────────────────────────────
-const CACHE_NAME = 'maha-pos-v3';
+const CACHE_NAME = 'maha-pos-v4';
 
 // Core files to cache for offline use
 const CORE_ASSETS = [

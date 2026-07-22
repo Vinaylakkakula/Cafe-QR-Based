@@ -535,7 +535,7 @@ async function init() {
     }
   }
 
-  // Poll database every 6 seconds to sync menu and categories on the spot without refresh
+  // Poll database every 2 seconds to sync menu and categories on the spot without refresh
   setInterval(async () => {
     if (customerSupabase) {
       try {
@@ -546,7 +546,7 @@ async function init() {
         console.warn("Failed to auto-sync menu and categories:", e);
       }
     }
-  }, 6000);
+  }, 2000);
 }
 
 async function loadPOSState() {

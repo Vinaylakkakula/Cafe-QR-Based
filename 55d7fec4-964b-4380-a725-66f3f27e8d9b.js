@@ -516,10 +516,10 @@ function App({ authUser, onLogout }) {
   React.useEffect(() => {
     if (!window.supabaseClient) return;
 
-    // Poll every 6 seconds as configured by the user
+    // Poll every 2 seconds as configured by the user
     const interval = setInterval(() => {
       pullLatestState(false);
-    }, 6000);
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [selectedId, modal, view]);
