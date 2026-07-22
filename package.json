@@ -1,0 +1,9 @@
+{
+  "name": "maha-pos-qr",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.7",
+    "web-push": "^3.6.7"
+  }
+}
