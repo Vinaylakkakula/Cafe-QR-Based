@@ -90,24 +90,6 @@ ALTER TABLE pos_reservations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_qr_orders DISABLE ROW LEVEL SECURITY;
 
--- Enable Supabase Realtime for instant zero-delay syncing across all devices
-ALTER PUBLICATION supabase_realtime ADD TABLE pos_settings;
-ALTER PUBLICATION supabase_realtime ADD TABLE pos_menu;
-ALTER PUBLICATION supabase_realtime ADD TABLE pos_tables;
-ALTER PUBLICATION supabase_realtime ADD TABLE pos_orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE pos_qr_orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE pos_reservations;
-ALTER PUBLICATION supabase_realtime ADD TABLE pos_customers;
-
--- Set REPLICA IDENTITY to FULL so UPDATE/DELETE events include full row data
-ALTER TABLE pos_settings REPLICA IDENTITY FULL;
-ALTER TABLE pos_menu REPLICA IDENTITY FULL;
-ALTER TABLE pos_tables REPLICA IDENTITY FULL;
-ALTER TABLE pos_orders REPLICA IDENTITY FULL;
-ALTER TABLE pos_qr_orders REPLICA IDENTITY FULL;
-ALTER TABLE pos_reservations REPLICA IDENTITY FULL;
-ALTER TABLE pos_customers REPLICA IDENTITY FULL;
-
 -- Clean existing data to avoid conflicts during branding change
 TRUNCATE TABLE pos_settings, pos_tables, pos_menu, pos_orders, pos_reservations, pos_customers, pos_qr_orders CASCADE;
 

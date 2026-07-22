@@ -512,35 +512,16 @@ function App({ authUser, onLogout }) {
     }
   };
 
-  // Periodically pull state from Supabase AND listen to Supabase realtime events to keep all devices in sync on the spot
+  // Periodically pull state from Supabase to keep all devices in sync
   React.useEffect(() => {
     if (!window.supabaseClient) return;
 
-    // 1. Hook up Supabase Realtime for instant, on-the-spot updates
-    let realtimeSub = null;
-    try {
-      realtimeSub = window.supabaseClient
-        .channel("pos-all-db-changes")
-        .on("postgres_changes", { event: "*", schema: "public" }, (payload) => {
-          console.log(`[Realtime Sync] Change detected in table ${payload.table} (${payload.eventType}). Pulling latest state.`);
-          pullLatestState(true);
-        })
-        .subscribe();
-    } catch (e) {
-      console.warn("Supabase realtime subscription failed:", e);
-    }
-
-    // 2. Poll every 6 seconds as a robust fallback in case of connection dropouts or replication settings
+    // Poll every 6 seconds as configured by the user
     const interval = setInterval(() => {
       pullLatestState(false);
     }, 6000);
 
-    return () => {
-      clearInterval(interval);
-      if (realtimeSub) {
-        try { window.supabaseClient.removeChannel(realtimeSub); } catch {}
-      }
-    };
+    return () => clearInterval(interval);
   }, [selectedId, modal, view]);
 
   React.useEffect(() => {
