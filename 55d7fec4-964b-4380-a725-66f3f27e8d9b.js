@@ -84,6 +84,8 @@ function App({ authUser, onLogout }) {
   React.useEffect(() => { staffRef.current = staff; }, [staff]);
   const menuItemsRef = React.useRef(menuItems);
   React.useEffect(() => { menuItemsRef.current = menuItems; }, [menuItems]);
+  const categoriesRef = React.useRef(categories);
+  React.useEffect(() => { categoriesRef.current = categories; }, [categories]);
   
   // Simple flag to skip one push cycle after a sync pull updates local state
   const skipNextPushRef = React.useRef(false);
@@ -324,6 +326,7 @@ function App({ authUser, onLogout }) {
               setTables(loadedTables);
             }
             if (dbState.menuItems) setMenuItems(dbState.menuItems);
+            if (dbState.categories) setCategories(dbState.categories);
             if (dbState.orders) setOrders(dbState.orders);
             if (dbState.reservations) setReservations(dbState.reservations);
             if (dbState.customers) setCustomers(dbState.customers);
@@ -484,6 +487,14 @@ function App({ authUser, onLogout }) {
             if (JSON.stringify(menuItemsRef.current) !== JSON.stringify(dbState.menuItems)) {
               nextMenuItems = dbState.menuItems;
               setMenuItems(dbState.menuItems);
+              hasChanges = true;
+            }
+          }
+          let nextCategories = categoriesRef.current;
+          if (dbState.categories) {
+            if (JSON.stringify(categoriesRef.current) !== JSON.stringify(dbState.categories)) {
+              nextCategories = dbState.categories;
+              setCategories(dbState.categories);
               hasChanges = true;
             }
           }

@@ -60,6 +60,17 @@ async function fetchSupabaseState() {
     } catch (e) {
       console.warn("Could not load staff data (row might not exist yet):", e);
     }
+
+    // Fetch Categories
+    let categories = null;
+    try {
+      const categoriesRes = await supabaseClient.from("pos_settings").select("data").eq("id", "categories").single();
+      if (categoriesRes.data) {
+        categories = categoriesRes.data.data;
+      }
+    } catch (e) {
+      console.warn("Could not load categories data (row might not exist yet):", e);
+    }
     
     // Fetch Tables
     const tablesRes = await supabaseClient.from("pos_tables").select("*").order("num", { ascending: true });
@@ -145,6 +156,7 @@ async function fetchSupabaseState() {
       settings,
       tables,
       menuItems,
+      categories,
       orders,
       reservations,
       customers,
@@ -160,7 +172,7 @@ async function fetchSupabaseState() {
 async function pushStateToSupabase(state) {
   if (!supabaseClient) return;
   try {
-    const { settings, tables, menuItems, orders, reservations, customers, staff } = state;
+    const { settings, tables, menuItems, categories, orders, reservations, customers, staff } = state;
     
     // Sync Settings
     if (settings) {
@@ -170,6 +182,11 @@ async function pushStateToSupabase(state) {
     // Sync Staff
     if (staff) {
       await supabaseClient.from("pos_settings").upsert([{ id: "staff", data: staff }]);
+    }
+    
+    // Sync Categories
+    if (categories) {
+      await supabaseClient.from("pos_settings").upsert([{ id: "categories", data: categories }]);
     }
     
     // Sync Tables

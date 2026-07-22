@@ -548,6 +548,18 @@ async function loadPOSState() {
         restaurantName = settingsData.data.restaurantName || "Vinay Cafe";
       }
 
+      // Load categories
+      let loadedCategories = [];
+      try {
+        const { data: catData } = await customerSupabase
+          .from("pos_settings").select("data").eq("id", "categories").single();
+        if (catData && catData.data) {
+          loadedCategories = catData.data;
+        }
+      } catch (e) {
+        console.warn("Could not load categories from Supabase settings:", e);
+      }
+
       // Load menu
       const { data: menuData } = await customerSupabase
         .from("pos_menu").select("*").eq("available", true);
@@ -563,14 +575,19 @@ async function loadPOSState() {
           stock: m.stock,
           img: m.img || ""
         }));
-        // Derive categories from menu items
-        const catSet = [...new Set(menuItems.map(i => i.cat))];
-        const catIcons = { veg:"🥬", egg:"🥚", chicken:"🍗", starters:"🥗", mains:"🍽", grill:"🔥", pasta:"🍝", sides:"🥔", desserts:"🍰", drinks:"🍷", beverages:"☕", snacks:"🍿", soups:"🍜", salads:"🥗", biryani:"🍚", breads:"🫓", rice:"🍚", thali:"🍛" };
-        categories = catSet.map(c => ({
-          id: c,
-          name: c.charAt(0).toUpperCase() + c.slice(1),
-          icon: catIcons[c.toLowerCase()] || "🍴"
-        }));
+        
+        if (loadedCategories && loadedCategories.length > 0) {
+          categories = loadedCategories;
+        } else {
+          // Derive categories from menu items
+          const catSet = [...new Set(menuItems.map(i => i.cat))];
+          const catIcons = { veg:"🥬", egg:"🥚", chicken:"🍗", starters:"🥗", mains:"🍽", grill:"🔥", pasta:"🍝", sides:"🥔", desserts:"🍰", drinks:"🍷", beverages:"☕", snacks:"🍿", soups:"🍜", salads:"🥗", biryani:"🍚", breads:"🫓", rice:"🍚", thali:"🍛" };
+          categories = catSet.map(c => ({
+            id: c,
+            name: c.charAt(0).toUpperCase() + c.slice(1),
+            icon: catIcons[c.toLowerCase()] || "🍴"
+          }));
+        }
         console.log(`Loaded ${menuItems.length} items from Supabase.`);
         return; // Successfully loaded from Supabase
       }
