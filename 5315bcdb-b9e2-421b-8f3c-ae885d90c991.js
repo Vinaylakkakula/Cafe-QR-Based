@@ -201,50 +201,80 @@ const FloorPlan = ({ tables, selectedId, onSelect, onContext, settings, getTable
 
 const TableContextMenu = ({ ctx, onClose, onSetStatus, onAssignWaiter }) => {
   const ref = React.useRef();
+  // Use refs for callbacks to avoid stale closures from [] deps
+  const onCloseRef = React.useRef(onClose);
+  const onSetStatusRef = React.useRef(onSetStatus);
+  const onAssignWaiterRef = React.useRef(onAssignWaiter);
+  React.useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  React.useEffect(() => { onSetStatusRef.current = onSetStatus; }, [onSetStatus]);
+  React.useEffect(() => { onAssignWaiterRef.current = onAssignWaiter; }, [onAssignWaiter]);
+
   React.useEffect(() => {
-    const close = (e) => { if (!ref.current?.contains(e.target)) onClose(); };
-    document.addEventListener("click", close);
-    document.addEventListener("contextmenu", close);
+    // Delay adding document listener to avoid the opening right-click/long-press
+    // from immediately triggering close via event bubbling
+    let listenersAdded = false;
+    const close = (e) => {
+      if (!ref.current?.contains(e.target)) {
+        onCloseRef.current();
+      }
+    };
+    const timer = setTimeout(() => {
+      listenersAdded = true;
+      document.addEventListener("click", close, true);
+      document.addEventListener("contextmenu", close, true);
+    }, 50);
     return () => {
-      document.removeEventListener("click", close);
-      document.removeEventListener("contextmenu", close);
+      clearTimeout(timer);
+      if (listenersAdded) {
+        document.removeEventListener("click", close, true);
+        document.removeEventListener("contextmenu", close, true);
+      }
     };
   }, []);
+
   if (!ctx) return null;
   const table = ctx.table;
   const currentSplit = table.splits?.[table.activeSplit];
   const isReady = currentSplit?.courseStage === "ready";
 
+  // Handler factory: stopPropagation prevents the document close listener
+  // from firing before onSetStatus completes in the same event cycle
+  const handleItemClick = (action) => (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    action();
+  };
+
   return (
     <div ref={ref} className="ctx-menu" style={{ top: ctx.y, left: ctx.x }}>
       {isReady && (
         <>
-          <div className="ctx-item" onClick={() => {
+          <div className="ctx-item" onClick={handleItemClick(() => {
             const updatedSplits = [...table.splits];
             updatedSplits[table.activeSplit] = { ...currentSplit, courseStage: "served" };
-            onSetStatus({ ...table, splits: updatedSplits }, "occupied");
-            onClose();
-          }} style={{ color: 'var(--green)', fontWeight: 600 }}>
+            onSetStatusRef.current({ ...table, splits: updatedSplits }, "occupied");
+            onCloseRef.current();
+          })} style={{ color: 'var(--green)', fontWeight: 600, cursor: 'pointer' }}>
             🍽️ Mark Order Served
           </div>
           <div className="divider" style={{margin:'4px 6px'}} />
         </>
       )}
-      <div className="ctx-item" onClick={() => { onSetStatus(table, "available"); onClose(); }}>
+      <div className="ctx-item" style={{cursor:'pointer'}} onClick={handleItemClick(() => { onSetStatusRef.current(table, "available"); onCloseRef.current(); })}>
         <span className="legend-dot" style={{background:'var(--green)'}}/>Mark Available
       </div>
-      <div className="ctx-item" onClick={() => { onSetStatus(table, "reserved"); onClose(); }}>
+      <div className="ctx-item" style={{cursor:'pointer'}} onClick={handleItemClick(() => { onSetStatusRef.current(table, "reserved"); onCloseRef.current(); })}>
         <span className="legend-dot" style={{background:'var(--blue)'}}/>Mark Reserved
       </div>
-      <div className="ctx-item" onClick={() => { onSetStatus(table, "occupied"); onClose(); }}>
+      <div className="ctx-item" style={{cursor:'pointer'}} onClick={handleItemClick(() => { onSetStatusRef.current(table, "occupied"); onCloseRef.current(); })}>
         <span className="legend-dot" style={{background:'var(--amber)'}}/>Mark Occupied
       </div>
       <div className="divider" style={{margin:'4px 6px'}} />
-      <div className="ctx-item" onClick={() => { onAssignWaiter(table); onClose(); }}>
+      <div className="ctx-item" style={{cursor:'pointer'}} onClick={handleItemClick(() => { onAssignWaiterRef.current(table); onCloseRef.current(); })}>
         <Icon name="user" size={12} /> Assign Waiter
       </div>
       <div className="divider" style={{margin:'4px 6px'}} />
-      <div className="ctx-item" onClick={() => { if (ctx.onShowQR) ctx.onShowQR(table); onClose(); }}>
+      <div className="ctx-item" style={{cursor:'pointer'}} onClick={handleItemClick(() => { if (ctx.onShowQR) ctx.onShowQR(table); onCloseRef.current(); })}>
         📲 Show QR Code
       </div>
     </div>

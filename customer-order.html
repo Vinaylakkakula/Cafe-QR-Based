@@ -535,18 +535,25 @@ async function init() {
     }
   }
 
-  // Poll database every 2 seconds to sync menu and categories on the spot without refresh
+  // Poll database every 5 seconds to sync menu and categories on the spot without refresh
+  // Only re-render if the data actually changed to avoid image blinking
+  let _lastMenuFingerprint = JSON.stringify(menuItems) + JSON.stringify(categories);
   setInterval(async () => {
     if (customerSupabase) {
       try {
         await loadPOSState();
-        renderCategories();
-        renderMenu();
+        const newFingerprint = JSON.stringify(menuItems) + JSON.stringify(categories);
+        if (newFingerprint !== _lastMenuFingerprint) {
+          _lastMenuFingerprint = newFingerprint;
+          renderCategories();
+          renderMenu();
+          console.log("Menu data changed, re-rendered.");
+        }
       } catch (e) {
         console.warn("Failed to auto-sync menu and categories:", e);
       }
     }
-  }, 2000);
+  }, 5000);
 }
 
 async function loadPOSState() {

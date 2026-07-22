@@ -972,8 +972,9 @@ input, select, textarea { font-family: inherit; }
   z-index: 200; min-width: 180px;
   animation: modalIn .15s ease;
 }
-.ctx-item { padding: 8px 12px; font-size: 13px; border-radius: 6px; display: flex; align-items: center; gap: 10px; }
+.ctx-item { padding: 8px 12px; font-size: 13px; border-radius: 6px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; -webkit-user-select: none; transition: background .1s; }
 .ctx-item:hover { background: var(--bg-3); }
+.ctx-item:active { background: var(--bg-3); opacity: 0.8; }
 .ctx-item .k { font-size: 10px; color: var(--text-muted); margin-left: auto; }
 
 /* KOT */
