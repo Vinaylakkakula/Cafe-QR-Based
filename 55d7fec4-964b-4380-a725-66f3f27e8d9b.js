@@ -72,7 +72,6 @@ function App({ authUser, onLogout }) {
   const lastPushTimeRef = React.useRef(0);
   const settingsRef = React.useRef(settings);
   React.useEffect(() => { settingsRef.current = settings; }, [settings]);
-  
   const tablesRef = React.useRef(tables);
   React.useEffect(() => { tablesRef.current = tables; }, [tables]);
   const ordersRef = React.useRef(orders);
@@ -85,34 +84,9 @@ function App({ authUser, onLogout }) {
   React.useEffect(() => { staffRef.current = staff; }, [staff]);
   const menuItemsRef = React.useRef(menuItems);
   React.useEffect(() => { menuItemsRef.current = menuItems; }, [menuItems]);
-
-  const lastSyncStateRef = React.useRef("");
-  const getStateHash = (s, t, m, o, r, c, st) => {
-    // Normalise settings and tables types to ensure comparison is 100% stable
-    const cleanSettings = s ? {
-      ...s,
-      tableCount: parseInt(s.tableCount) || 10,
-      taxRate: parseFloat(s.taxRate) || 0,
-      serviceChargeRate: parseFloat(s.serviceChargeRate) || 0
-    } : null;
-
-    const cleanTables = t?.map(x => ({
-      ...x,
-      num: x.num === "Takeaway" ? "Takeaway" : (parseInt(x.num) || 0),
-      capacity: parseInt(x.capacity) || 0,
-      activeSplit: parseInt(x.activeSplit) || 0
-    }));
-
-    return JSON.stringify({
-      settings: cleanSettings,
-      tables: cleanTables,
-      menuItems: m,
-      orders: o,
-      reservations: r,
-      customers: c,
-      staff: st
-    });
-  };
+  
+  // Simple flag to skip one push cycle after a sync pull updates local state
+  const skipNextPushRef = React.useRef(false);
 
   React.useEffect(() => {
     if (prevTablesRef.current && prevTablesRef.current.length > 0) {
@@ -355,16 +329,8 @@ function App({ authUser, onLogout }) {
             if (dbState.customers) setCustomers(dbState.customers);
             if (dbState.staff) setStaff(dbState.staff);
             
-            // Set the initial sync state hash to prevent immediate loop push
-            lastSyncStateRef.current = getStateHash(
-              dbState.settings || settings,
-              loadedTables,
-              dbState.menuItems || menuItems,
-              dbState.orders || orders,
-              dbState.reservations || reservations,
-              dbState.customers || customers,
-              dbState.staff || staff
-            );
+            // Skip the push that will fire from these state updates
+            skipNextPushRef.current = true;
             
             showToast("Loaded real-time state from Supabase");
           }
@@ -393,10 +359,15 @@ function App({ authUser, onLogout }) {
       try {
         const dbState = await window.fetchSupabaseState();
         if (dbState) {
+          let hasChanges = false;
+          
           let nextSettings = settingsRef.current;
           if (dbState.settings) {
-            nextSettings = dbState.settings;
-            setSettings(prev => JSON.stringify(prev) !== JSON.stringify(dbState.settings) ? dbState.settings : prev);
+            if (JSON.stringify(settingsRef.current) !== JSON.stringify(dbState.settings)) {
+              nextSettings = dbState.settings;
+              setSettings(dbState.settings);
+              hasChanges = true;
+            }
           }
           
           let nextTables = tablesRef.current;
@@ -469,46 +440,57 @@ function App({ authUser, onLogout }) {
               };
             });
             
-            nextTables = merged;
-            setTables(prev => JSON.stringify(prev) !== JSON.stringify(merged) ? merged : prev);
+            if (JSON.stringify(tablesRef.current) !== JSON.stringify(merged)) {
+              nextTables = merged;
+              setTables(merged);
+              hasChanges = true;
+            }
           }
           
           let nextOrders = ordersRef.current;
           if (dbState.orders) {
-            nextOrders = dbState.orders;
-            setOrders(prev => JSON.stringify(prev) !== JSON.stringify(dbState.orders) ? dbState.orders : prev);
+            if (JSON.stringify(ordersRef.current) !== JSON.stringify(dbState.orders)) {
+              nextOrders = dbState.orders;
+              setOrders(dbState.orders);
+              hasChanges = true;
+            }
           }
           let nextReservations = reservationsRef.current;
           if (dbState.reservations) {
-            nextReservations = dbState.reservations;
-            setReservations(prev => JSON.stringify(prev) !== JSON.stringify(dbState.reservations) ? dbState.reservations : prev);
+            if (JSON.stringify(reservationsRef.current) !== JSON.stringify(dbState.reservations)) {
+              nextReservations = dbState.reservations;
+              setReservations(dbState.reservations);
+              hasChanges = true;
+            }
           }
           let nextCustomers = customersRef.current;
           if (dbState.customers) {
-            nextCustomers = dbState.customers;
-            setCustomers(prev => JSON.stringify(prev) !== JSON.stringify(dbState.customers) ? dbState.customers : prev);
+            if (JSON.stringify(customersRef.current) !== JSON.stringify(dbState.customers)) {
+              nextCustomers = dbState.customers;
+              setCustomers(dbState.customers);
+              hasChanges = true;
+            }
           }
           let nextStaff = staffRef.current;
           if (dbState.staff) {
-            nextStaff = dbState.staff;
-            setStaff(prev => JSON.stringify(prev) !== JSON.stringify(dbState.staff) ? dbState.staff : prev);
+            if (JSON.stringify(staffRef.current) !== JSON.stringify(dbState.staff)) {
+              nextStaff = dbState.staff;
+              setStaff(dbState.staff);
+              hasChanges = true;
+            }
           }
           let nextMenuItems = menuItemsRef.current;
           if (dbState.menuItems) {
-            nextMenuItems = dbState.menuItems;
-            setMenuItems(prev => JSON.stringify(prev) !== JSON.stringify(dbState.menuItems) ? dbState.menuItems : prev);
+            if (JSON.stringify(menuItemsRef.current) !== JSON.stringify(dbState.menuItems)) {
+              nextMenuItems = dbState.menuItems;
+              setMenuItems(dbState.menuItems);
+              hasChanges = true;
+            }
           }
           
-          // Capture the hash of what we just pulled and merged from the DB
-          lastSyncStateRef.current = getStateHash(
-            nextSettings,
-            nextTables,
-            nextMenuItems,
-            nextOrders,
-            nextReservations,
-            nextCustomers,
-            nextStaff
-          );
+          if (hasChanges) {
+            skipNextPushRef.current = true;
+          }
         }
       } catch (err) {
         console.warn("Realtime state sync failed:", err);
@@ -522,15 +504,11 @@ function App({ authUser, onLogout }) {
     const state = { settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed, menuVersion: MENU_VERSION };
     saveState(state);
     if (window.supabaseClient && isLoaded) {
-      // Check if state matches the last pulled/merged state from DB to prevent loops
-      const currentHash = getStateHash(settings, tables, menuItems, orders, reservations, customers, staff);
-      if (lastSyncStateRef.current && lastSyncStateRef.current === currentHash) {
-        console.log("State identical to database. Skipping loop push.");
+      // If this state change was caused by a sync pull, skip pushing it back
+      if (skipNextPushRef.current) {
+        skipNextPushRef.current = false;
         return;
       }
-      
-      // Update hash to current since we are about to push
-      lastSyncStateRef.current = currentHash;
       lastPushTimeRef.current = Date.now();
       window.pushStateToSupabase(state);
     }
@@ -681,6 +659,17 @@ function App({ authUser, onLogout }) {
       current.push(prev.find(t => t.id === "takeaway") || { id: "takeaway", num: "Takeaway", capacity: 0, status: "available", waiter: "", splits: [createSplit("Takeaway")], activeSplit: 0 });
       return current;
     });
+    
+    // Immediately delete orphaned tables from Supabase (don't wait for the push pipeline)
+    if (window.supabaseClient) {
+      window.supabaseClient.from("pos_tables").delete()
+        .gt("num", count)
+        .neq("num", 9999)
+        .then(({ error }) => {
+          if (error) console.warn("Failed to delete orphaned tables:", error);
+          else console.log("Immediately deleted tables with num >", count);
+        });
+    }
   };
 
   const seatReservation = (r) => {
