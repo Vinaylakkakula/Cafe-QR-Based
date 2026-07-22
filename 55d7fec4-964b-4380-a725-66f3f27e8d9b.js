@@ -88,14 +88,29 @@ function App({ authUser, onLogout }) {
 
   const lastSyncStateRef = React.useRef("");
   const getStateHash = (s, t, m, o, r, c, st) => {
+    // Normalise settings and tables types to ensure comparison is 100% stable
+    const cleanSettings = s ? {
+      ...s,
+      tableCount: parseInt(s.tableCount) || 10,
+      taxRate: parseFloat(s.taxRate) || 0,
+      serviceChargeRate: parseFloat(s.serviceChargeRate) || 0
+    } : null;
+
+    const cleanTables = t?.map(x => ({
+      ...x,
+      num: x.num === "Takeaway" ? "Takeaway" : (parseInt(x.num) || 0),
+      capacity: parseInt(x.capacity) || 0,
+      activeSplit: parseInt(x.activeSplit) || 0
+    }));
+
     return JSON.stringify({
-      settings: s ? { tableCount: s.tableCount, themeColor: s.themeColor, restaurantName: s.restaurantName, address: s.address, taxRate: s.taxRate } : null,
-      tables: t?.map(x => ({ id: x.id, num: x.num, capacity: x.capacity, status: x.status, waiter: x.waiter })),
-      menuItems: m?.map(x => ({ id: x.id, available: x.available, stock: x.stock })),
-      orders: o?.map(x => ({ id: x.id, ts: x.ts })),
-      reservations: r?.map(x => ({ id: x.id, status: x.status })),
-      customers: c?.map(x => ({ id: x.id, visits: x.visits })),
-      staff: st?.map(x => ({ id: x.id, role: x.role, payments: x.payments }))
+      settings: cleanSettings,
+      tables: cleanTables,
+      menuItems: m,
+      orders: o,
+      reservations: r,
+      customers: c,
+      staff: st
     });
   };
 
