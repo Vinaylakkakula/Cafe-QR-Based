@@ -534,6 +534,19 @@ async function init() {
       dbStatus.style.color = "var(--red)";
     }
   }
+
+  // Poll database every 6 seconds to sync menu and categories on the spot without refresh
+  setInterval(async () => {
+    if (customerSupabase) {
+      try {
+        await loadPOSState();
+        renderCategories();
+        renderMenu();
+      } catch (e) {
+        console.warn("Failed to auto-sync menu and categories:", e);
+      }
+    }
+  }, 6000);
 }
 
 async function loadPOSState() {
@@ -685,7 +698,10 @@ let activeCat = null;
 
 function renderCategories() {
   const cats = categories.filter(c => menuItems.some(i => i.cat === c.id && i.available));
-  if (cats.length) activeCat = cats[0].id;
+  // Preserve activeCat if it's still in the cats list, otherwise default to first available
+  if (cats.length && (!activeCat || !cats.some(c => c.id === activeCat))) {
+    activeCat = cats[0].id;
+  }
   const wrap = document.getElementById("catTabs");
   wrap.innerHTML = cats.map(c => `
     <button class="cat-tab ${c.id === activeCat ? 'active' : ''}"

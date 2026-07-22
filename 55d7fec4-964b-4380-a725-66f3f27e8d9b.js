@@ -349,166 +349,198 @@ function App({ authUser, onLogout }) {
     loadFromDb();
   }, []);
 
-  // Periodically sync/pull state from Supabase to keep all devices in sync
+  // Helper to pull the latest state from Supabase and apply differences to React state
+  const pullLatestState = async (isRealtimeTrigger = false) => {
+    // Skip pull if we recently pushed local changes (within 6 seconds) to prevent overwriting our own writes.
+    // However, if it's a realtime event, we allow a shorter 3-second throttle window.
+    const throttleLimit = isRealtimeTrigger ? 3000 : 6000;
+    if (Date.now() - lastPushTimeRef.current < throttleLimit) {
+      return;
+    }
+    // Also skip polling pulls if we are actively editing settings or have a modal open.
+    // For realtime triggers, we still pull so we don't miss instant updates.
+    if (!isRealtimeTrigger && (modal !== null || view === "settings")) {
+      return;
+    }
+
+    try {
+      const dbState = await window.fetchSupabaseState();
+      if (dbState) {
+        let hasChanges = false;
+        
+        let nextSettings = settingsRef.current;
+        if (dbState.settings) {
+          if (JSON.stringify(settingsRef.current) !== JSON.stringify(dbState.settings)) {
+            nextSettings = dbState.settings;
+            setSettings(dbState.settings);
+            hasChanges = true;
+          }
+        }
+        
+        let nextTables = tablesRef.current;
+        if (dbState.tables) {
+          const remoteTableCount = dbState.settings?.tableCount || settingsRef.current.tableCount || DEFAULT_SETTINGS.tableCount;
+          
+          const loaded = dbState.tables.filter(t => {
+            if (t.id === "takeaway" || t.num === "Takeaway") return true;
+            return typeof t.num === "number" && t.num <= remoteTableCount;
+          });
+          
+          if (!loaded.some(t => t.id === "takeaway")) {
+            loaded.push({
+              id: "takeaway",
+              num: "Takeaway",
+              capacity: 0,
+              status: "available",
+              waiter: "",
+              splits: [createSplit("Takeaway")],
+              activeSplit: 0,
+            });
+          }
+          
+          const STAGE_WEIGHTS = { new: 0, preparing: 1, cooking: 1, ready: 2, served: 3 };
+          const mergeSplits = (localSplits, remoteSplits) => {
+            if (!localSplits) return remoteSplits;
+            if (!remoteSplits) return localSplits;
+            return remoteSplits.map((rSplit, idx) => {
+              const lSplit = localSplits[idx];
+              if (!lSplit) return rSplit;
+              const rWeight = STAGE_WEIGHTS[rSplit.courseStage] || 0;
+              const lWeight = STAGE_WEIGHTS[lSplit.courseStage] || 0;
+              if (lWeight > rWeight) return lSplit;
+              if (rWeight > lWeight) return rSplit;
+              if (lSplit.items?.length > 0 && (!rSplit.items || rSplit.items.length === 0)) {
+                return lSplit;
+              }
+              return rSplit;
+            });
+          };
+
+          const merged = loaded.map(t => {
+            const localTable = tablesRef.current.find(p => p.id === t.id);
+            if (!localTable) return t;
+            
+            if (t.id === "takeaway" && !window.supabaseClient) {
+              return localTable;
+            }
+            
+            const localStatus = localTable.status;
+            const remoteStatus = t.status;
+            
+            if (remoteStatus === "occupied" && localStatus === "occupied") {
+              const mergedSplits = mergeSplits(localTable.splits, t.splits);
+              return {
+                ...t,
+                status: "occupied",
+                waiter: localTable.waiter || t.waiter || "",
+                splits: mergedSplits
+              };
+            }
+            
+            if (localStatus !== remoteStatus) {
+              return localTable;
+            }
+            
+            return {
+              ...t,
+              waiter: localTable.waiter || t.waiter || "",
+            };
+          });
+          
+          if (JSON.stringify(tablesRef.current) !== JSON.stringify(merged)) {
+            nextTables = merged;
+            setTables(merged);
+            hasChanges = true;
+          }
+        }
+        
+        let nextOrders = ordersRef.current;
+        if (dbState.orders) {
+          if (JSON.stringify(ordersRef.current) !== JSON.stringify(dbState.orders)) {
+            nextOrders = dbState.orders;
+            setOrders(dbState.orders);
+            hasChanges = true;
+          }
+        }
+        let nextReservations = reservationsRef.current;
+        if (dbState.reservations) {
+          if (JSON.stringify(reservationsRef.current) !== JSON.stringify(dbState.reservations)) {
+            nextReservations = dbState.reservations;
+            setReservations(dbState.reservations);
+            hasChanges = true;
+          }
+        }
+        let nextCustomers = customersRef.current;
+        if (dbState.customers) {
+          if (JSON.stringify(customersRef.current) !== JSON.stringify(dbState.customers)) {
+            nextCustomers = dbState.customers;
+            setCustomers(dbState.customers);
+            hasChanges = true;
+          }
+        }
+        let nextStaff = staffRef.current;
+        if (dbState.staff) {
+          if (JSON.stringify(staffRef.current) !== JSON.stringify(dbState.staff)) {
+            nextStaff = dbState.staff;
+            setStaff(dbState.staff);
+            hasChanges = true;
+          }
+        }
+        let nextMenuItems = menuItemsRef.current;
+        if (dbState.menuItems) {
+          if (JSON.stringify(menuItemsRef.current) !== JSON.stringify(dbState.menuItems)) {
+            nextMenuItems = dbState.menuItems;
+            setMenuItems(dbState.menuItems);
+            hasChanges = true;
+          }
+        }
+        let nextCategories = categoriesRef.current;
+        if (dbState.categories) {
+          if (JSON.stringify(categoriesRef.current) !== JSON.stringify(dbState.categories)) {
+            nextCategories = dbState.categories;
+            setCategories(dbState.categories);
+            hasChanges = true;
+          }
+        }
+        
+        if (hasChanges) {
+          skipNextPushRef.current = true;
+        }
+      }
+    } catch (err) {
+      console.warn("State sync pull failed:", err);
+    }
+  };
+
+  // Periodically pull state from Supabase AND listen to Supabase realtime events to keep all devices in sync on the spot
   React.useEffect(() => {
     if (!window.supabaseClient) return;
 
-    const interval = setInterval(async () => {
-      // Skip poll pull if we recently pushed local changes (within 6 seconds), if a modal is open,
-      // or if the user is on the settings page (actively editing table count, etc.)
-      if (Date.now() - lastPushTimeRef.current < 6000 || modal !== null || view === "settings") {
-        return;
-      }
-      try {
-        const dbState = await window.fetchSupabaseState();
-        if (dbState) {
-          let hasChanges = false;
-          
-          let nextSettings = settingsRef.current;
-          if (dbState.settings) {
-            if (JSON.stringify(settingsRef.current) !== JSON.stringify(dbState.settings)) {
-              nextSettings = dbState.settings;
-              setSettings(dbState.settings);
-              hasChanges = true;
-            }
-          }
-          
-          let nextTables = tablesRef.current;
-          if (dbState.tables) {
-            const remoteTableCount = dbState.settings?.tableCount || settingsRef.current.tableCount || DEFAULT_SETTINGS.tableCount;
-            
-            const loaded = dbState.tables.filter(t => {
-              if (t.id === "takeaway" || t.num === "Takeaway") return true;
-              return typeof t.num === "number" && t.num <= remoteTableCount;
-            });
-            
-            if (!loaded.some(t => t.id === "takeaway")) {
-              loaded.push({
-                id: "takeaway",
-                num: "Takeaway",
-                capacity: 0,
-                status: "available",
-                waiter: "",
-                splits: [createSplit("Takeaway")],
-                activeSplit: 0,
-              });
-            }
-            
-            const STAGE_WEIGHTS = { new: 0, preparing: 1, cooking: 1, ready: 2, served: 3 };
-            const mergeSplits = (localSplits, remoteSplits) => {
-              if (!localSplits) return remoteSplits;
-              if (!remoteSplits) return localSplits;
-              return remoteSplits.map((rSplit, idx) => {
-                const lSplit = localSplits[idx];
-                if (!lSplit) return rSplit;
-                const rWeight = STAGE_WEIGHTS[rSplit.courseStage] || 0;
-                const lWeight = STAGE_WEIGHTS[lSplit.courseStage] || 0;
-                if (lWeight > rWeight) return lSplit;
-                if (rWeight > lWeight) return rSplit;
-                if (lSplit.items?.length > 0 && (!rSplit.items || rSplit.items.length === 0)) {
-                  return lSplit;
-                }
-                return rSplit;
-              });
-            };
+    // 1. Hook up Supabase Realtime for instant, on-the-spot updates
+    let realtimeSub = null;
+    try {
+      realtimeSub = window.supabaseClient
+        .channel("pos-all-db-changes")
+        .on("postgres_changes", { event: "*", schema: "public" }, (payload) => {
+          console.log(`[Realtime Sync] Change detected in table ${payload.table} (${payload.eventType}). Pulling latest state.`);
+          pullLatestState(true);
+        })
+        .subscribe();
+    } catch (e) {
+      console.warn("Supabase realtime subscription failed:", e);
+    }
 
-            const merged = loaded.map(t => {
-              const localTable = tablesRef.current.find(p => p.id === t.id);
-              if (!localTable) return t;
-              
-              if (t.id === "takeaway" && !window.supabaseClient) {
-                return localTable;
-              }
-              
-              const localStatus = localTable.status;
-              const remoteStatus = t.status;
-              
-              if (remoteStatus === "occupied" && localStatus === "occupied") {
-                const mergedSplits = mergeSplits(localTable.splits, t.splits);
-                return {
-                  ...t,
-                  status: "occupied",
-                  waiter: localTable.waiter || t.waiter || "",
-                  splits: mergedSplits
-                };
-              }
-              
-              if (localStatus !== remoteStatus) {
-                return localTable;
-              }
-              
-              return {
-                ...t,
-                waiter: localTable.waiter || t.waiter || "",
-              };
-            });
-            
-            if (JSON.stringify(tablesRef.current) !== JSON.stringify(merged)) {
-              nextTables = merged;
-              setTables(merged);
-              hasChanges = true;
-            }
-          }
-          
-          let nextOrders = ordersRef.current;
-          if (dbState.orders) {
-            if (JSON.stringify(ordersRef.current) !== JSON.stringify(dbState.orders)) {
-              nextOrders = dbState.orders;
-              setOrders(dbState.orders);
-              hasChanges = true;
-            }
-          }
-          let nextReservations = reservationsRef.current;
-          if (dbState.reservations) {
-            if (JSON.stringify(reservationsRef.current) !== JSON.stringify(dbState.reservations)) {
-              nextReservations = dbState.reservations;
-              setReservations(dbState.reservations);
-              hasChanges = true;
-            }
-          }
-          let nextCustomers = customersRef.current;
-          if (dbState.customers) {
-            if (JSON.stringify(customersRef.current) !== JSON.stringify(dbState.customers)) {
-              nextCustomers = dbState.customers;
-              setCustomers(dbState.customers);
-              hasChanges = true;
-            }
-          }
-          let nextStaff = staffRef.current;
-          if (dbState.staff) {
-            if (JSON.stringify(staffRef.current) !== JSON.stringify(dbState.staff)) {
-              nextStaff = dbState.staff;
-              setStaff(dbState.staff);
-              hasChanges = true;
-            }
-          }
-          let nextMenuItems = menuItemsRef.current;
-          if (dbState.menuItems) {
-            if (JSON.stringify(menuItemsRef.current) !== JSON.stringify(dbState.menuItems)) {
-              nextMenuItems = dbState.menuItems;
-              setMenuItems(dbState.menuItems);
-              hasChanges = true;
-            }
-          }
-          let nextCategories = categoriesRef.current;
-          if (dbState.categories) {
-            if (JSON.stringify(categoriesRef.current) !== JSON.stringify(dbState.categories)) {
-              nextCategories = dbState.categories;
-              setCategories(dbState.categories);
-              hasChanges = true;
-            }
-          }
-          
-          if (hasChanges) {
-            skipNextPushRef.current = true;
-          }
-        }
-      } catch (err) {
-        console.warn("Realtime state sync failed:", err);
-      }
-    }, 4500);
+    // 2. Poll every 6 seconds as a robust fallback in case of connection dropouts or replication settings
+    const interval = setInterval(() => {
+      pullLatestState(false);
+    }, 6000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (realtimeSub) {
+        try { window.supabaseClient.removeChannel(realtimeSub); } catch {}
+      }
+    };
   }, [selectedId, modal, view]);
 
   React.useEffect(() => {
