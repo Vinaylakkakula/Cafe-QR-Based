@@ -1,7 +1,7 @@
 {
-  "name": "MAHA FAST FOOD COURT — POS",
-  "short_name": "MAHA POS",
-  "description": "Restaurant Point of Sale & QR Ordering System for MAHA FAST FOOD COURT",
+  "name": "Vinay & Shreyansh POS",
+  "short_name": "VS POS",
+  "description": "Restaurant Point of Sale & QR Ordering System",
   "id": "/?source=pwa",
   "start_url": "/index.html",
   "scope": "/",
