@@ -527,7 +527,7 @@ async function init() {
   const dbStatus = document.getElementById("dbStatus");
   if (dbStatus) {
     if (customerSupabase && menuItems.length > 0) {
-      dbStatus.innerHTML = "● Online";
+      dbStatus.innerHTML = "● Live";
       dbStatus.style.color = "var(--green)";
     } else {
       dbStatus.innerHTML = "● Offline (Local Fallback)";
@@ -535,18 +535,52 @@ async function init() {
     }
   }
 
-  // Poll database every 6 seconds to sync menu and categories on the spot without refresh
-  setInterval(async () => {
-    if (customerSupabase) {
+  // ── Instant real-time sync via Supabase Realtime WebSocket ──
+  // Changes made in the Admin panel reflect here with ZERO delay.
+  if (customerSupabase) {
+    try {
+      // Listen for any change on pos_menu (item added/edited/deleted/toggled)
+      customerSupabase
+        .channel("customer-menu-live")
+        .on("postgres_changes", { event: "*", schema: "public", table: "pos_menu" }, async () => {
+          console.log("[Live Sync] Menu change detected — refreshing instantly");
+          await loadPOSState();
+          renderCategories();
+          renderMenu();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: "pos_settings" }, async () => {
+          console.log("[Live Sync] Settings/categories change detected — refreshing instantly");
+          await loadPOSState();
+          document.getElementById("cafeName").textContent = restaurantName;
+          renderCategories();
+          renderMenu();
+        })
+        .subscribe((status) => {
+          console.log("[Live Sync] Realtime subscription status:", status);
+          if (dbStatus) {
+            if (status === "SUBSCRIBED") {
+              dbStatus.innerHTML = "● Live";
+              dbStatus.style.color = "var(--green)";
+            } else if (status === "CHANNEL_ERROR") {
+              dbStatus.innerHTML = "● Reconnecting…";
+              dbStatus.style.color = "var(--amber)";
+            }
+          }
+        });
+      console.log("[Live Sync] Subscribed to real-time menu & settings changes.");
+    } catch (e) {
+      console.warn("Realtime subscription failed, falling back to polling:", e);
+    }
+
+    // Lightweight fallback poll every 15s in case WebSocket drops silently
+    setInterval(async () => {
       try {
         await loadPOSState();
         renderCategories();
         renderMenu();
-      } catch (e) {
-        console.warn("Failed to auto-sync menu and categories:", e);
-      }
-    }
-  }, 6000);
+      } catch (e) {}
+    }, 15000);
+  }
 }
 
 async function loadPOSState() {
