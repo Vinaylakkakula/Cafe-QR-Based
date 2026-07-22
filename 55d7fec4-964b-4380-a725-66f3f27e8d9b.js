@@ -70,6 +70,8 @@ function App({ authUser, onLogout }) {
   const prevTablesRef = React.useRef(tables);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const lastPushTimeRef = React.useRef(0);
+  const settingsRef = React.useRef(settings);
+  React.useEffect(() => { settingsRef.current = settings; }, [settings]);
 
   React.useEffect(() => {
     if (prevTablesRef.current && prevTablesRef.current.length > 0) {
@@ -286,7 +288,12 @@ function App({ authUser, onLogout }) {
           if (dbState) {
             if (dbState.settings) setSettings(dbState.settings);
             if (dbState.tables) {
-              const loaded = [...dbState.tables];
+              // Filter tables by the tableCount from settings to avoid loading orphaned rows
+              const tableCount = dbState.settings?.tableCount || DEFAULT_SETTINGS.tableCount;
+              const loaded = dbState.tables.filter(t => {
+                if (t.id === "takeaway" || t.num === "Takeaway") return true;
+                return typeof t.num === "number" && t.num <= tableCount;
+              });
               if (!loaded.some(t => t.id === "takeaway")) {
                 loaded.push({
                   id: "takeaway",
@@ -324,9 +331,9 @@ function App({ authUser, onLogout }) {
     if (!window.supabaseClient) return;
 
     const interval = setInterval(async () => {
-      // Skip poll pull if we recently pushed local changes (within 6 seconds) or if a modal is open
-      // (user is actively interacting/typing/checking out/sending KOT) to prevent overwrite races
-      if (Date.now() - lastPushTimeRef.current < 6000 || modal !== null) {
+      // Skip poll pull if we recently pushed local changes (within 6 seconds), if a modal is open,
+      // or if the user is on the settings page (actively editing table count, etc.)
+      if (Date.now() - lastPushTimeRef.current < 6000 || modal !== null || view === "settings") {
         return;
       }
       try {
@@ -340,7 +347,7 @@ function App({ authUser, onLogout }) {
             setTables(prev => {
               // Use the remote settings tableCount to filter — this prevents
               // stale table rows (that haven't been cleaned up yet) from re-appearing
-              const remoteTableCount = dbState.settings?.tableCount || settings.tableCount || DEFAULT_SETTINGS.tableCount;
+              const remoteTableCount = dbState.settings?.tableCount || settingsRef.current.tableCount || DEFAULT_SETTINGS.tableCount;
               
               // Filter remote tables: only keep tables with num <= remoteTableCount, plus takeaway
               const loaded = dbState.tables.filter(t => {
@@ -439,7 +446,7 @@ function App({ authUser, onLogout }) {
     }, 4500);
 
     return () => clearInterval(interval);
-  }, [selectedId, modal]);
+  }, [selectedId, modal, view]);
 
   React.useEffect(() => {
     const state = { settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed, menuVersion: MENU_VERSION };

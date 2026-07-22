@@ -186,10 +186,21 @@ async function pushStateToSupabase(state) {
         }));
       await supabaseClient.from("pos_tables").upsert(dbTables);
       
-      // Delete any table rows from Supabase that are no longer in the local tables array
-      // This is critical when tableCount is reduced — without this, old rows persist and get pulled back
+      // Delete any table rows from Supabase that are no longer in the local tables array.
+      // This is critical when tableCount is reduced — without this, old rows persist and get pulled back.
+      // Two-pronged approach: delete by ID and by num range for maximum reliability.
       try {
         const currentIds = tables.map(t => t.id);
+        const tableCount = settings?.tableCount || 0;
+        
+        // 1. Delete by num range: remove all physical tables with num > tableCount
+        if (tableCount > 0) {
+          await supabaseClient.from("pos_tables").delete()
+            .gt("num", tableCount)
+            .neq("num", 9999); // don't delete takeaway
+        }
+        
+        // 2. Delete by ID: remove any rows whose id isn't in the local set
         const { data: remoteTables } = await supabaseClient.from("pos_tables").select("id");
         if (remoteTables) {
           const orphanIds = remoteTables.map(r => r.id).filter(id => !currentIds.includes(id));
