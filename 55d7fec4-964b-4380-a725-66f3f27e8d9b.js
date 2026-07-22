@@ -332,9 +332,22 @@ function App({ authUser, onLogout }) {
       try {
         const dbState = await window.fetchSupabaseState();
         if (dbState) {
+          // Sync settings (including tableCount) from Supabase
+          if (dbState.settings) {
+            setSettings(prev => JSON.stringify(prev) !== JSON.stringify(dbState.settings) ? dbState.settings : prev);
+          }
           if (dbState.tables) {
             setTables(prev => {
-              const loaded = [...dbState.tables];
+              // Use the remote settings tableCount to filter — this prevents
+              // stale table rows (that haven't been cleaned up yet) from re-appearing
+              const remoteTableCount = dbState.settings?.tableCount || settings.tableCount || DEFAULT_SETTINGS.tableCount;
+              
+              // Filter remote tables: only keep tables with num <= remoteTableCount, plus takeaway
+              const loaded = dbState.tables.filter(t => {
+                if (t.id === "takeaway" || t.num === "Takeaway") return true;
+                return typeof t.num === "number" && t.num <= remoteTableCount;
+              });
+              
               if (!loaded.some(t => t.id === "takeaway")) {
                 loaded.push({
                   id: "takeaway",

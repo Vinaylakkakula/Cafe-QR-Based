@@ -185,6 +185,22 @@ async function pushStateToSupabase(state) {
           active_split: t.activeSplit
         }));
       await supabaseClient.from("pos_tables").upsert(dbTables);
+      
+      // Delete any table rows from Supabase that are no longer in the local tables array
+      // This is critical when tableCount is reduced — without this, old rows persist and get pulled back
+      try {
+        const currentIds = tables.map(t => t.id);
+        const { data: remoteTables } = await supabaseClient.from("pos_tables").select("id");
+        if (remoteTables) {
+          const orphanIds = remoteTables.map(r => r.id).filter(id => !currentIds.includes(id));
+          if (orphanIds.length > 0) {
+            await supabaseClient.from("pos_tables").delete().in("id", orphanIds);
+            console.log("Deleted orphaned table rows from Supabase:", orphanIds);
+          }
+        }
+      } catch (delErr) {
+        console.warn("Failed to clean up orphaned tables:", delErr);
+      }
     }
     
     // Sync Menu Items
