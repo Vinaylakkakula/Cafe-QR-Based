@@ -379,7 +379,13 @@ const SettingsView = ({ settings, onChange, onResetTables }) => {
           </div>
           <div className="setting-field">
             <label>Table Count</label>
-            <input type="number" min="1" max="40" value={settings.tableCount} onChange={(e) => { const n = parseInt(e.target.value) || 1; upd({ tableCount: n }); onResetTables(n); }}/>
+            <input type="number" min="1" max="40" value={settings.tableCount} onChange={(e) => { 
+              let n = parseInt(e.target.value) || 1; 
+              if (n < 1) n = 1;
+              if (n > 40) n = 40; 
+              upd({ tableCount: n }); 
+              onResetTables(n); 
+            }}/>
           </div>
         </div>
         <div className="divider"/>
