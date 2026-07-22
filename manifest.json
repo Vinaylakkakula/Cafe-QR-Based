@@ -12,7 +12,7 @@
   "theme_color": "#f2a43a",
   "icons": [
     {
-      "src": "icon-512.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
@@ -27,19 +27,27 @@
   "screenshots": [
     {
       "src": "hero.jpeg",
-      "sizes": "1400x933",
+      "sizes": "1400x1050",
       "type": "image/jpeg",
       "form_factor": "wide",
       "label": "MAHA POS Dashboard Screen"
     },
     {
       "src": "hero.jpeg",
-      "sizes": "1400x933",
+      "sizes": "1400x1050",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "MAHA POS Mobile Screen"
     }
   ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.darbarstreet.pos",
+      "id": "com.darbarstreet.pos"
+    }
+  ],
+  "iarc_rating_id": "e8386348-1db1-4b13-90d5-60b615b1cf4b",
   "categories": ["food", "business", "utilities"],
   "lang": "en",
   "dir": "ltr"
