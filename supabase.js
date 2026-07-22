@@ -315,6 +315,92 @@ async function pushStateToSupabase(state) {
   }
 }
 
+// ── Web Push Registration Helpers ───────────────────────────────────────────
+const VAPID_PUBLIC_KEY = "BH1rM8SgGALXWgez8o05tC0QILQLycQtL6gU321h5voMKwlmHVVp5dW1r_qy6-6dK6nDGqsImq-NCoT6qjs1dPQ";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function registerPushSubscription() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn("Push notifications are not supported on this browser.");
+    return false;
+  }
+  if (!supabaseClient) {
+    console.warn("Supabase client not initialized. Cannot register push subscription.");
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    
+    // Request notification permission if not already granted
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+    
+    if (permission !== 'granted') {
+      console.warn("Notification permission denied by user.");
+      return false;
+    }
+
+    // Subscribe user to Push service
+    const subscribeOptions = {
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    };
+
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe(subscribeOptions);
+      console.log("Newly subscribed to Push Service:", subscription);
+    } else {
+      console.log("Already subscribed to Push Service:", subscription);
+    }
+
+    // Convert keys to strings to save in Supabase
+    const key = subscription.getKey('p256dh');
+    const token = subscription.getKey('auth');
+    const p256dh = btoa(String.fromCharCode.apply(null, new Uint8Array(key)));
+    const auth = btoa(String.fromCharCode.apply(null, new Uint8Array(token)));
+
+    const record = {
+      endpoint: subscription.endpoint,
+      p256dh: p256dh,
+      auth: auth
+    };
+
+    // Save/upsert to Supabase pos_push_subscriptions table
+    const { error } = await supabaseClient
+      .from("pos_push_subscriptions")
+      .upsert([record], { onConflict: "endpoint" });
+
+    if (error) {
+      console.error("Failed to save push subscription to Supabase:", error);
+      return false;
+    }
+
+    console.log("Push subscription successfully saved to Supabase.");
+    return true;
+  } catch (err) {
+    console.error("Error subscribing to push notifications:", err);
+    return false;
+  }
+}
+
 // Initialize on page load
 initSupabase();
 
@@ -325,5 +411,6 @@ Object.assign(window, {
   initSupabase,
   testSupabaseConnection,
   fetchSupabaseState,
-  pushStateToSupabase
+  pushStateToSupabase,
+  registerPushSubscription
 });

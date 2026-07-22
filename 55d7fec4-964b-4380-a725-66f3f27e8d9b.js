@@ -380,6 +380,17 @@ function App({ authUser, onLogout }) {
     loadFromDb();
   }, []);
 
+  // Auto-subscribe/update Web Push subscription once app is loaded
+  React.useEffect(() => {
+    if (isLoaded && window.registerPushSubscription) {
+      setTimeout(() => {
+        window.registerPushSubscription().catch(err => {
+          console.warn("Auto push registration failed:", err);
+        });
+      }, 1500);
+    }
+  }, [isLoaded]);
+
   // Helper to pull the latest state from Supabase and apply differences to React state
   const pullLatestState = async (isRealtimeTrigger = false) => {
     // Skip pull if we recently pushed local changes (within 6 seconds) to prevent overwriting our own writes.

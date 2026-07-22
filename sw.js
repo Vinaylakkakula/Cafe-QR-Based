@@ -123,3 +123,34 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('notificationclose', (event) => {
   console.log('[SW] Notification closed:', event.notification.tag);
 });
+
+// ── Remote Web Push Event Listener ──────────────────────────────────────────
+// Wakes up the service worker when a push payload is received from FCM/APNs
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push received');
+  let data = { title: '🔔 New QR Order', body: 'A new order has been placed!' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { title: '🔔 New QR Order', body: event.data.text() };
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-512.png',
+      badge: '/icon-512.png',
+      tag: data.tag || 'maha-pos-notification',
+      requireInteraction: true,
+      vibrate: [300, 100, 300, 100, 300],
+      data: data.data || {},
+      actions: [
+        { action: 'view', title: '👀 View Order' },
+        { action: 'dismiss', title: '✕ Dismiss' }
+      ]
+    })
+  );
+});
+

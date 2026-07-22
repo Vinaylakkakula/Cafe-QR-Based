@@ -81,6 +81,14 @@ CREATE TABLE IF NOT EXISTS pos_qr_orders (
   status TEXT NOT NULL DEFAULT 'pending'
 );
 
+-- 8. Create pos_push_subscriptions table (for remote web push notifications)
+CREATE TABLE IF NOT EXISTS pos_push_subscriptions (
+  endpoint TEXT PRIMARY KEY,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Disable Row Level Security (RLS) for simple integration
 ALTER TABLE pos_settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_tables DISABLE ROW LEVEL SECURITY;
@@ -89,9 +97,10 @@ ALTER TABLE pos_orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_reservations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_qr_orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE pos_push_subscriptions DISABLE ROW LEVEL SECURITY;
 
 -- Clean existing data to avoid conflicts during branding change
-TRUNCATE TABLE pos_settings, pos_tables, pos_menu, pos_orders, pos_reservations, pos_customers, pos_qr_orders CASCADE;
+TRUNCATE TABLE pos_settings, pos_tables, pos_menu, pos_orders, pos_reservations, pos_customers, pos_qr_orders, pos_push_subscriptions CASCADE;
 
 -- Insert Global settings
 INSERT INTO pos_settings (id, data) VALUES ('global', '{
