@@ -72,6 +72,32 @@ function App({ authUser, onLogout }) {
   const lastPushTimeRef = React.useRef(0);
   const settingsRef = React.useRef(settings);
   React.useEffect(() => { settingsRef.current = settings; }, [settings]);
+  
+  const tablesRef = React.useRef(tables);
+  React.useEffect(() => { tablesRef.current = tables; }, [tables]);
+  const ordersRef = React.useRef(orders);
+  React.useEffect(() => { ordersRef.current = orders; }, [orders]);
+  const reservationsRef = React.useRef(reservations);
+  React.useEffect(() => { reservationsRef.current = reservations; }, [reservations]);
+  const customersRef = React.useRef(customers);
+  React.useEffect(() => { customersRef.current = customers; }, [customers]);
+  const staffRef = React.useRef(staff);
+  React.useEffect(() => { staffRef.current = staff; }, [staff]);
+  const menuItemsRef = React.useRef(menuItems);
+  React.useEffect(() => { menuItemsRef.current = menuItems; }, [menuItems]);
+
+  const lastSyncStateRef = React.useRef("");
+  const getStateHash = (s, t, m, o, r, c, st) => {
+    return JSON.stringify({
+      settings: s ? { tableCount: s.tableCount, themeColor: s.themeColor, restaurantName: s.restaurantName, address: s.address, taxRate: s.taxRate } : null,
+      tables: t?.map(x => ({ id: x.id, num: x.num, capacity: x.capacity, status: x.status, waiter: x.waiter })),
+      menuItems: m?.map(x => ({ id: x.id, available: x.available, stock: x.stock })),
+      orders: o?.map(x => ({ id: x.id, ts: x.ts })),
+      reservations: r?.map(x => ({ id: x.id, status: x.status })),
+      customers: c?.map(x => ({ id: x.id, visits: x.visits })),
+      staff: st?.map(x => ({ id: x.id, role: x.role, payments: x.payments }))
+    });
+  };
 
   React.useEffect(() => {
     if (prevTablesRef.current && prevTablesRef.current.length > 0) {
@@ -287,15 +313,16 @@ function App({ authUser, onLogout }) {
           const dbState = await window.fetchSupabaseState();
           if (dbState) {
             if (dbState.settings) setSettings(dbState.settings);
+            let loadedTables = [];
             if (dbState.tables) {
               // Filter tables by the tableCount from settings to avoid loading orphaned rows
               const tableCount = dbState.settings?.tableCount || DEFAULT_SETTINGS.tableCount;
-              const loaded = dbState.tables.filter(t => {
+              loadedTables = dbState.tables.filter(t => {
                 if (t.id === "takeaway" || t.num === "Takeaway") return true;
                 return typeof t.num === "number" && t.num <= tableCount;
               });
-              if (!loaded.some(t => t.id === "takeaway")) {
-                loaded.push({
+              if (!loadedTables.some(t => t.id === "takeaway")) {
+                loadedTables.push({
                   id: "takeaway",
                   num: "Takeaway",
                   capacity: 0,
@@ -305,13 +332,25 @@ function App({ authUser, onLogout }) {
                   activeSplit: 0,
                 });
               }
-              setTables(loaded);
+              setTables(loadedTables);
             }
             if (dbState.menuItems) setMenuItems(dbState.menuItems);
             if (dbState.orders) setOrders(dbState.orders);
             if (dbState.reservations) setReservations(dbState.reservations);
             if (dbState.customers) setCustomers(dbState.customers);
             if (dbState.staff) setStaff(dbState.staff);
+            
+            // Set the initial sync state hash to prevent immediate loop push
+            lastSyncStateRef.current = getStateHash(
+              dbState.settings || settings,
+              loadedTables,
+              dbState.menuItems || menuItems,
+              dbState.orders || orders,
+              dbState.reservations || reservations,
+              dbState.customers || customers,
+              dbState.staff || staff
+            );
+            
             showToast("Loaded real-time state from Supabase");
           }
         } catch (e) {
@@ -339,114 +378,122 @@ function App({ authUser, onLogout }) {
       try {
         const dbState = await window.fetchSupabaseState();
         if (dbState) {
-          // Sync settings (including tableCount) from Supabase
+          let nextSettings = settingsRef.current;
           if (dbState.settings) {
+            nextSettings = dbState.settings;
             setSettings(prev => JSON.stringify(prev) !== JSON.stringify(dbState.settings) ? dbState.settings : prev);
           }
+          
+          let nextTables = tablesRef.current;
           if (dbState.tables) {
-            setTables(prev => {
-              // Use the remote settings tableCount to filter — this prevents
-              // stale table rows (that haven't been cleaned up yet) from re-appearing
-              const remoteTableCount = dbState.settings?.tableCount || settingsRef.current.tableCount || DEFAULT_SETTINGS.tableCount;
-              
-              // Filter remote tables: only keep tables with num <= remoteTableCount, plus takeaway
-              const loaded = dbState.tables.filter(t => {
-                if (t.id === "takeaway" || t.num === "Takeaway") return true;
-                return typeof t.num === "number" && t.num <= remoteTableCount;
+            const remoteTableCount = dbState.settings?.tableCount || settingsRef.current.tableCount || DEFAULT_SETTINGS.tableCount;
+            
+            const loaded = dbState.tables.filter(t => {
+              if (t.id === "takeaway" || t.num === "Takeaway") return true;
+              return typeof t.num === "number" && t.num <= remoteTableCount;
+            });
+            
+            if (!loaded.some(t => t.id === "takeaway")) {
+              loaded.push({
+                id: "takeaway",
+                num: "Takeaway",
+                capacity: 0,
+                status: "available",
+                waiter: "",
+                splits: [createSplit("Takeaway")],
+                activeSplit: 0,
               });
+            }
+            
+            const STAGE_WEIGHTS = { new: 0, preparing: 1, cooking: 1, ready: 2, served: 3 };
+            const mergeSplits = (localSplits, remoteSplits) => {
+              if (!localSplits) return remoteSplits;
+              if (!remoteSplits) return localSplits;
+              return remoteSplits.map((rSplit, idx) => {
+                const lSplit = localSplits[idx];
+                if (!lSplit) return rSplit;
+                const rWeight = STAGE_WEIGHTS[rSplit.courseStage] || 0;
+                const lWeight = STAGE_WEIGHTS[lSplit.courseStage] || 0;
+                if (lWeight > rWeight) return lSplit;
+                if (rWeight > lWeight) return rSplit;
+                if (lSplit.items?.length > 0 && (!rSplit.items || rSplit.items.length === 0)) {
+                  return lSplit;
+                }
+                return rSplit;
+              });
+            };
+
+            const merged = loaded.map(t => {
+              const localTable = tablesRef.current.find(p => p.id === t.id);
+              if (!localTable) return t;
               
-              if (!loaded.some(t => t.id === "takeaway")) {
-                loaded.push({
-                  id: "takeaway",
-                  num: "Takeaway",
-                  capacity: 0,
-                  status: "available",
-                  waiter: "",
-                  splits: [createSplit("Takeaway")],
-                  activeSplit: 0,
-                });
+              if (t.id === "takeaway" && !window.supabaseClient) {
+                return localTable;
               }
               
-              const STAGE_WEIGHTS = { new: 0, preparing: 1, cooking: 1, ready: 2, served: 3 };
-              const mergeSplits = (localSplits, remoteSplits) => {
-                if (!localSplits) return remoteSplits;
-                if (!remoteSplits) return localSplits;
-                return remoteSplits.map((rSplit, idx) => {
-                  const lSplit = localSplits[idx];
-                  if (!lSplit) return rSplit;
-                  const rWeight = STAGE_WEIGHTS[rSplit.courseStage] || 0;
-                  const lWeight = STAGE_WEIGHTS[lSplit.courseStage] || 0;
-                  if (lWeight > rWeight) return lSplit;
-                  if (rWeight > lWeight) return rSplit;
-                  if (lSplit.items?.length > 0 && (!rSplit.items || rSplit.items.length === 0)) {
-                    return lSplit;
-                  }
-                  return rSplit;
-                });
-              };
-
-              // Merge local edits with remote loaded tables
-              const merged = loaded.map(t => {
-                const localTable = prev.find(p => p.id === t.id);
-                if (!localTable) return t;
-                
-                // If it is the virtual takeaway table, preserve local takeaway state
-                if (t.id === "takeaway" && !window.supabaseClient) {
-                  return localTable;
-                }
-                
-                // Always preserve local status — it is fresher since the 6-second
-                // push debounce guarantees our push has landed before we pull.
-                // This prevents right-click status changes from being overwritten.
-                const localStatus = localTable.status;
-                const remoteStatus = t.status;
-                
-                // If local status is occupied and remote is occupied, merge splits based on progress
-                if (remoteStatus === "occupied" && localStatus === "occupied") {
-                  const mergedSplits = mergeSplits(localTable.splits, t.splits);
-                  return {
-                    ...t,
-                    status: "occupied",
-                    waiter: localTable.waiter || t.waiter || "",
-                    splits: mergedSplits
-                  };
-                }
-                
-                // For any status difference, trust the local state
-                // (right-click changes, checkout clears, etc.)
-                if (localStatus !== remoteStatus) {
-                  return localTable;
-                }
-                
-                // Statuses match and not both occupied — accept remote data
-                // but preserve local waiter if set
+              const localStatus = localTable.status;
+              const remoteStatus = t.status;
+              
+              if (remoteStatus === "occupied" && localStatus === "occupied") {
+                const mergedSplits = mergeSplits(localTable.splits, t.splits);
                 return {
                   ...t,
+                  status: "occupied",
                   waiter: localTable.waiter || t.waiter || "",
+                  splits: mergedSplits
                 };
-              });
-
-              if (JSON.stringify(prev) !== JSON.stringify(merged)) {
-                return merged;
               }
-              return prev;
+              
+              if (localStatus !== remoteStatus) {
+                return localTable;
+              }
+              
+              return {
+                ...t,
+                waiter: localTable.waiter || t.waiter || "",
+              };
             });
+            
+            nextTables = merged;
+            setTables(prev => JSON.stringify(prev) !== JSON.stringify(merged) ? merged : prev);
           }
+          
+          let nextOrders = ordersRef.current;
           if (dbState.orders) {
+            nextOrders = dbState.orders;
             setOrders(prev => JSON.stringify(prev) !== JSON.stringify(dbState.orders) ? dbState.orders : prev);
           }
+          let nextReservations = reservationsRef.current;
           if (dbState.reservations) {
+            nextReservations = dbState.reservations;
             setReservations(prev => JSON.stringify(prev) !== JSON.stringify(dbState.reservations) ? dbState.reservations : prev);
           }
+          let nextCustomers = customersRef.current;
           if (dbState.customers) {
+            nextCustomers = dbState.customers;
             setCustomers(prev => JSON.stringify(prev) !== JSON.stringify(dbState.customers) ? dbState.customers : prev);
           }
+          let nextStaff = staffRef.current;
           if (dbState.staff) {
+            nextStaff = dbState.staff;
             setStaff(prev => JSON.stringify(prev) !== JSON.stringify(dbState.staff) ? dbState.staff : prev);
           }
+          let nextMenuItems = menuItemsRef.current;
           if (dbState.menuItems) {
+            nextMenuItems = dbState.menuItems;
             setMenuItems(prev => JSON.stringify(prev) !== JSON.stringify(dbState.menuItems) ? dbState.menuItems : prev);
           }
+          
+          // Capture the hash of what we just pulled and merged from the DB
+          lastSyncStateRef.current = getStateHash(
+            nextSettings,
+            nextTables,
+            nextMenuItems,
+            nextOrders,
+            nextReservations,
+            nextCustomers,
+            nextStaff
+          );
         }
       } catch (err) {
         console.warn("Realtime state sync failed:", err);
@@ -460,6 +507,15 @@ function App({ authUser, onLogout }) {
     const state = { settings, tables, menuItems, categories, orders, events, reservations, customers, staff, notifications, tipDismissed, menuVersion: MENU_VERSION };
     saveState(state);
     if (window.supabaseClient && isLoaded) {
+      // Check if state matches the last pulled/merged state from DB to prevent loops
+      const currentHash = getStateHash(settings, tables, menuItems, orders, reservations, customers, staff);
+      if (lastSyncStateRef.current && lastSyncStateRef.current === currentHash) {
+        console.log("State identical to database. Skipping loop push.");
+        return;
+      }
+      
+      // Update hash to current since we are about to push
+      lastSyncStateRef.current = currentHash;
       lastPushTimeRef.current = Date.now();
       window.pushStateToSupabase(state);
     }
