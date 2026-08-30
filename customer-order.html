@@ -506,7 +506,116 @@
 
   @media (min-width: 480px) {
     .menu-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
-    body { max-width: 600px; margin: 0 auto; }
+    body { max-width: 1200px; margin: 0 auto; }
+  }
+
+  /* ── Tablet: portrait (600px+) ───────────────────────────────────── */
+  @media (min-width: 600px) {
+    body { padding-bottom: 100px; }
+    .header { padding: 18px 24px; }
+    .cafe-name { font-size: 20px; }
+    .table-tag { font-size: 12px; padding: 4px 12px; }
+    .cart-btn { padding: 12px 20px; font-size: 14px; border-radius: 12px; }
+    .cart-badge { width: 20px; height: 20px; font-size: 11px; }
+
+    .cat-scroll { padding: 14px 24px; gap: 8px; }
+    .cat-tab { padding: 9px 18px; font-size: 13px; border-radius: 22px; }
+
+    .menu-section { padding: 20px 24px; }
+    .section-heading { font-size: 12px; margin-bottom: 16px; }
+    .menu-grid {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .menu-card { border-radius: 14px; }
+    .menu-body { padding: 12px; }
+    .menu-name { font-size: 13px; }
+    .menu-desc { font-size: 11px; }
+    .menu-price { font-size: 15px; }
+    .add-btn { width: 30px; height: 30px; border-radius: 8px; font-size: 20px; }
+    .qty-badge { font-size: 11px; padding: 3px 9px; }
+
+    .cart-drawer { max-width: 480px; left: auto; right: 0; border-radius: 18px 0 0 0; }
+    .cart-head { padding: 16px 22px 12px; }
+    .cart-title { font-size: 18px; }
+    .cart-items { padding: 14px 22px; }
+    .ci-img { width: 52px; height: 52px; border-radius: 10px; }
+    .ci-name { font-size: 14px; }
+    .ci-price { font-size: 12px; }
+    .cart-foot { padding: 16px 22px; }
+    .ct-val { font-size: 20px; }
+    .place-btn { padding: 16px; font-size: 16px; border-radius: 12px; }
+
+    .bottom-bar { padding: 14px 24px 22px; }
+    .view-cart-btn { padding: 16px 24px; font-size: 16px; border-radius: 14px; max-width: 480px; margin: 0 auto; }
+
+    .success-screen { padding: 50px 32px; }
+    .success-title { font-size: 28px; }
+    .success-sub { font-size: 15px; }
+    .success-order-id { font-size: 22px; padding: 16px 28px; }
+    .order-summary-card { max-width: 440px; }
+
+    .toast-msg { font-size: 14px; padding: 12px 22px; border-radius: 12px; }
+  }
+
+  /* ── Tablet: landscape / larger tablets (768px+) ─────────────────── */
+  @media (min-width: 768px) {
+    .header { padding: 20px 32px; }
+    .cafe-name { font-size: 22px; }
+    .cart-btn { padding: 12px 24px; font-size: 15px; gap: 8px; }
+
+    .cat-scroll { padding: 16px 32px; gap: 10px; }
+    .cat-tab { padding: 10px 22px; font-size: 14px; }
+
+    .menu-section { padding: 24px 32px; }
+    .section-heading { font-size: 13px; letter-spacing: 0.12em; margin-bottom: 18px; }
+    .menu-grid {
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .menu-img { aspect-ratio: 4/3; }
+    .menu-body { padding: 14px; }
+    .menu-name { font-size: 14px; margin-bottom: 4px; }
+    .menu-desc { font-size: 12px; margin-bottom: 10px; }
+    .menu-price { font-size: 16px; }
+    .add-btn { width: 34px; height: 34px; border-radius: 9px; font-size: 22px; }
+
+    .cart-drawer { max-width: 520px; max-height: 80vh; }
+    .ci-img { width: 56px; height: 56px; }
+    .ci-name { font-size: 15px; }
+    .qty-minus, .qty-plus { width: 30px; height: 30px; font-size: 18px; border-radius: 8px; }
+    .qty-num { font-size: 16px; }
+
+    .view-cart-btn { max-width: 560px; }
+
+    .toast-wrap { bottom: 110px; }
+  }
+
+  /* ── Large tablet / iPad Pro landscape (1024px+) ─────────────────── */
+  @media (min-width: 1024px) {
+    .header { padding: 22px 40px; }
+    .cafe-name { font-size: 24px; }
+
+    .cat-scroll { padding: 18px 40px; }
+
+    .menu-section { padding: 28px 40px; }
+    .menu-grid {
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+    }
+    .menu-card { border-radius: 16px; }
+    .menu-body { padding: 16px; }
+    .menu-name { font-size: 15px; }
+    .menu-desc { font-size: 12px; }
+    .menu-price { font-size: 17px; }
+    .add-btn { width: 36px; height: 36px; font-size: 24px; }
+
+    .cart-drawer { max-width: 560px; }
+    .view-cart-btn { max-width: 640px; }
+
+    .success-screen { padding: 60px 40px; }
+    .order-summary-card { max-width: 500px; }
   }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
